@@ -1,169 +1,199 @@
-import { Buffer } from 'buffer'
-const moment = require('moment')
-const { basicDelta } = require('./file-api')
-const { dirname, basename } = require('./path-utils')
-const shim = require('./shim').default
-const { ltrimSlashes } = require('./path-utils')
+import { Buffer } from "buffer";
+const moment = require("moment");
+const { basicDelta } = require("./file-api");
+const { dirname, basename } = require("./path-utils");
+const shim = require("./shim").default;
+const { ltrimSlashes } = require("./path-utils");
 
 export class FileApiDriverOneDrive {
-  constructor (api) {
-    super(api)
-    this.pathCache_ = {}
+  constructor(api) {
+    super(api);
+    this.pathCache_ = {};
   }
 
-  api () {
-    return this.api_
+  api() {
+    return this.api_;
   }
 
-  itemFilter_ () {
+  itemFilter_() {
     return {
-      select: 'name,file,folder,fileSystemInfo,parentReference'
-    }
+      select: "name,file,folder,fileSystemInfo,parentReference",
+    };
   }
 
-  makePath_ (path) {
-    return path
+  makePath_(path) {
+    return path;
   }
 
-  makeItems_ (odItems) {
-    const output = []
+  makeItems_(odItems) {
+    const output = [];
     for (let i = 0; i < odItems.length; i++) {
-      output.push(this.makeItem_(odItems[i]))
+      output.push(this.makeItem_(odItems[i]));
     }
-    return output
+    return output;
   }
 
-  makeItem_ (odItem) {
+  makeItem_(odItem) {
     const output = {
       path: odItem.name,
-      isDir: 'folder' in odItem
-    }
+      isDir: "folder" in odItem,
+    };
 
-    if ('deleted' in odItem) {
-      output.isDeleted = true
+    if ("deleted" in odItem) {
+      output.isDeleted = true;
     } else {
       // output.created_time = moment(odItem.fileSystemInfo.createdDateTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ').format('x');
-      output.updated_time = Number(moment(odItem.fileSystemInfo.lastModifiedDateTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ').format('x'))
+      output.updated_time = Number(
+        moment(
+          odItem.fileSystemInfo.lastModifiedDateTime,
+          "YYYY-MM-DDTHH:mm:ss.SSSZ",
+        ).format("x"),
+      );
     }
 
-    return output
+    return output;
   }
 
-  async statRaw_ (path) {
-    let item = null
+  async statRaw_(path) {
+    let item = null;
     try {
-      item = await this.api_.execJson('GET', this.makePath_(path), this.itemFilter_())
+      item = await this.api_.execJson(
+        "GET",
+        this.makePath_(path),
+        this.itemFilter_(),
+      );
     } catch (error) {
-      if (error.code === 'itemNotFound') return null
-      throw error
+      if (error.code === "itemNotFound") return null;
+      throw error;
     }
-    return item
+    return item;
   }
 
-  async stat (path) {
-    const item = await this.statRaw_(path)
-    if (!item) return null
-    return this.makeItem_(item)
+  async stat(path) {
+    const item = await this.statRaw_(path);
+    if (!item) return null;
+    return this.makeItem_(item);
   }
 
-  async setTimestamp (path, timestamp) {
+  async setTimestamp(path, timestamp) {
     const body = {
       fileSystemInfo: {
-        lastModifiedDateTime:
-					`${moment
-						.unix(timestamp / 1000)
-						.utc()
-						.format('YYYY-MM-DDTHH:mm:ss.SSS')}Z`
-      }
-    }
-    const item = await this.api_.execJson('PATCH', this.makePath_(path), null, body)
-    return this.makeItem_(item)
+        lastModifiedDateTime: `${moment
+          .unix(timestamp / 1000)
+          .utc()
+          .format("YYYY-MM-DDTHH:mm:ss.SSS")}Z`,
+      },
+    };
+    const item = await this.api_.execJson(
+      "PATCH",
+      this.makePath_(path),
+      null,
+      body,
+    );
+    return this.makeItem_(item);
   }
 
-  async list (path, options = null) {
-    options = { context: null, ...options }
+  async list(path, options = null) {
+    options = { context: null, ...options };
 
-    let query = { ...this.itemFilter_(), $top: 1000 }
-    let url = `${this.makePath_(path)}:/children`
+    let query = { ...this.itemFilter_(), $top: 1000 };
+    let url = `${this.makePath_(path)}:/children`;
 
     if (options.context) {
       // If there's a context, it already includes all required query
       // parameters, including $top
-      query = null
-      url = options.context
+      query = null;
+      url = options.context;
     }
 
-    const r = await this.api_.execJson('GET', url, query)
+    const r = await this.api_.execJson("GET", url, query);
 
     return {
-      hasMore: !!r['@odata.nextLink'],
+      hasMore: !!r["@odata.nextLink"],
       items: this.makeItems_(r.value),
-      context: r['@odata.nextLink']
-    }
+      context: r["@odata.nextLink"],
+    };
   }
 
-  async get (path, options = null) {
-    if (!options) options = {}
+  async get(path, options = null) {
+    if (!options) options = {};
 
     try {
-      if (options.target === 'file') {
-        const response = await this.api_.exec('GET', `${this.makePath_(path)}:/content`, null, null, options)
-        return response
+      if (options.target === "file") {
+        const response = await this.api_.exec(
+          "GET",
+          `${this.makePath_(path)}:/content`,
+          null,
+          null,
+          options,
+        );
+        return response;
       } else {
-        const content = await this.api_.execText('GET', `${this.makePath_(path)}:/content`)
-        return content
+        const content = await this.api_.execText(
+          "GET",
+          `${this.makePath_(path)}:/content`,
+        );
+        return content;
       }
     } catch (error) {
-      if (error.code === 'itemNotFound') return null
-      throw error
+      if (error.code === "itemNotFound") return null;
+      throw error;
     }
   }
 
-  async mkdir (path) {
-    let item = await this.stat(path)
-    if (item) return item
+  async mkdir(path) {
+    let item = await this.stat(path);
+    if (item) return item;
 
-    const parentPath = dirname(path)
-    item = await this.api_.execJson('POST', `${this.makePath_(parentPath)}:/children`, this.itemFilter_(), {
-      name: basename(path),
-      folder: {}
-    })
+    const parentPath = dirname(path);
+    item = await this.api_.execJson(
+      "POST",
+      `${this.makePath_(parentPath)}:/children`,
+      this.itemFilter_(),
+      {
+        name: basename(path),
+        folder: {},
+      },
+    );
 
-    return this.makeItem_(item)
+    return this.makeItem_(item);
   }
 
-  async put (path, content, options = null) {
-    if (!options) options = {}
+  async put(path, content, options = null) {
+    if (!options) options = {};
 
-    let response = null
+    let response = null;
     // We need to check the file size as files > 4 MBs are uploaded in a different way than files < 4 MB (see https://docs.microsoft.com/de-de/onedrive/developer/rest-api/concepts/upload?view=odsp-graph-online)
-    let byteSize = null
+    let byteSize = null;
 
-    if (options.source === 'file') {
-      byteSize = (await shim.fsDriver().stat(options.path)).size
+    if (options.source === "file") {
+      byteSize = (await shim.fsDriver().stat(options.path)).size;
     } else {
-      options.headers = { 'Content-Type': 'text/plain' }
-      byteSize = Buffer.byteLength(content)
+      options.headers = { "Content-Type": "text/plain" };
+      byteSize = Buffer.byteLength(content);
     }
 
-    path = byteSize < 4 * 1024 * 1024 ? `${this.makePath_(path)}:/content` : `${this.makePath_(path)}:/createUploadSession`
-    response = await this.api_.exec('PUT', path, null, content, options)
+    path =
+      byteSize < 4 * 1024 * 1024
+        ? `${this.makePath_(path)}:/content`
+        : `${this.makePath_(path)}:/createUploadSession`;
+    response = await this.api_.exec("PUT", path, null, content, options);
 
-    return response
+    return response;
   }
 
-  delete (path) {
-    return this.api_.exec('DELETE', this.makePath_(path))
+  delete(path) {
+    return this.api_.exec("DELETE", this.makePath_(path));
   }
 
-  async move () {
+  async move() {
     // Cannot work in an atomic way because if newPath already exist, the OneDrive API throw an error
     // "An item with the same name already exists under the parent". Some posts suggest to use
     // @name.conflictBehavior [0]but that doesn't seem to work. So until Microsoft fixes this
     // it's not possible to do an atomic move.
     //
     // [0] https://stackoverflow.com/questions/29191091/onedrive-api-overwrite-on-move
-    throw new Error('NOT WORKING')
+    throw new Error("NOT WORKING");
 
     // let previousItem = await this.statRaw_(oldPath);
 
@@ -184,88 +214,88 @@ export class FileApiDriverOneDrive {
     // return this.makeItem_(item);
   }
 
-  format () {
-    throw new Error('Not implemented')
+  format() {
+    throw new Error("Not implemented");
   }
 
-  async pathDetails_ (path) {
-    if (this.pathCache_[path]) return this.pathCache_[path]
-    const output = await this.api_.execJson('GET', path)
-    this.pathCache_[path] = output
-    return this.pathCache_[path]
+  async pathDetails_(path) {
+    if (this.pathCache_[path]) return this.pathCache_[path];
+    const output = await this.api_.execJson("GET", path);
+    this.pathCache_[path] = output;
+    return this.pathCache_[path];
   }
 
-  async clearRoot () {
+  async clearRoot() {
     const recurseItems = async (path) => {
-      path = ltrimSlashes(path)
-      const result = await this.list(this.fileApi_.fullPath(path))
-      const output = []
+      path = ltrimSlashes(path);
+      const result = await this.list(this.fileApi_.fullPath(path));
+      const output = [];
 
       for (const item of result.items) {
-        const fullPath = ltrimSlashes(`${path}/${item.path}`)
+        const fullPath = ltrimSlashes(`${path}/${item.path}`);
         if (item.isDir) {
-          await recurseItems(fullPath)
+          await recurseItems(fullPath);
         }
-        await this.delete(this.fileApi_.fullPath(fullPath))
+        await this.delete(this.fileApi_.fullPath(fullPath));
       }
 
-      return output
-    }
+      return output;
+    };
 
-    await recurseItems('')
+    await recurseItems("");
   }
 
-  async delta (path, options = null) {
-    const getDirStats = async path => {
-      let items = []
-      let context = null
+  async delta(path, options = null) {
+    const getDirStats = async (path) => {
+      let items = [];
+      let context = null;
 
       while (true) {
-        const result = await this.list(path, { includeDirs: false, context })
-        items = items.concat(result.items)
-        context = result.context
-        if (!result.hasMore) break
+        const result = await this.list(path, { includeDirs: false, context });
+        items = items.concat(result.items);
+        context = result.context;
+        if (!result.hasMore) break;
       }
 
-      return items
-    }
+      return items;
+    };
 
-    return await basicDelta(path, getDirStats, options)
+    return await basicDelta(path, getDirStats, options);
   }
 
-  async delta_BROKEN (path, options = null) {
+  async delta_BROKEN(path, options = null) {
     const output = {
       hasMore: false,
       context: {},
-      items: []
-    }
+      items: [],
+    };
 
     const freshStartDelta = () => {
-      const accountProperties = this.api_.accountProperties_
-      const url = `/drives/${accountProperties.driveId}/root/delta`
-      const query = this.itemFilter_()
-      query.select += ',deleted'
-      return { url, query }
-    }
+      const accountProperties = this.api_.accountProperties_;
+      const url = `/drives/${accountProperties.driveId}/root/delta`;
+      const query = this.itemFilter_();
+      query.select += ",deleted";
+      return { url, query };
+    };
 
-    const pathDetails = await this.pathDetails_(path)
-    const pathId = pathDetails.id
+    const pathDetails = await this.pathDetails_(path);
+    const pathId = pathDetails.id;
 
-    const context = options ? options.context : null
-    let url = context ? context.nextLink : null
-    let query = null
+    const context = options ? options.context : null;
+    let url = context ? context.nextLink : null;
+    let query = null;
 
     if (!url) {
-      const info = freshStartDelta()
-      url = info.url
-      query = info.query
+      const info = freshStartDelta();
+      url = info.url;
+      query = info.query;
     }
 
-    let response = null
+    let response = null;
     try {
-      response = await this.api_.execJson('GET', url, query)
+      response = await this.api_.execJson("GET", url, query);
     } catch (error) {
-      if (error.code === 'resyncRequired') {
+      if (error.code === "resyncRequired") {
         // Error: Resync required. Replace any local items with the server's version (including deletes) if you're sure that the service was up to date with your local changes when you last sync'd. Upload any local changes that the server doesn't know about.
         // Code: resyncRequired
         // Request: GET https://graph.microsoft.com/v1.0/drive/root:/Apps/JoplinDev:/delta?select=...
@@ -279,16 +309,16 @@ export class FileApiDriverOneDrive {
 
         // More info there: https://stackoverflow.com/q/46941371/561309
 
-        const info = freshStartDelta()
-        url = info.url
-        query = info.query
-        response = await this.api_.execJson('GET', url, query)
+        const info = freshStartDelta();
+        url = info.url;
+        query = info.query;
+        response = await this.api_.execJson("GET", url, query);
       } else {
-        throw error
+        throw error;
       }
     }
 
-    const items = []
+    const items = [];
 
     // The delta API might return things that happens in subdirectories and outside of the joplin directory.
     // We don't want to deal with these since all the files we're interested in are at the root of the joplin directory
@@ -300,41 +330,42 @@ export class FileApiDriverOneDrive {
     // modified when using OneDrive Personal).
 
     for (let i = 0; i < response.value.length; i++) {
-      const v = response.value[i]
-      if (v.parentReference.id !== pathId) continue
-      items.push(this.makeItem_(v))
+      const v = response.value[i];
+      if (v.parentReference.id !== pathId) continue;
+      items.push(this.makeItem_(v));
     }
 
-    output.items = output.items.concat(items)
+    output.items = output.items.concat(items);
 
-    let nextLink = null
+    let nextLink = null;
 
-    if (response['@odata.nextLink']) {
-      nextLink = response['@odata.nextLink']
-      output.hasMore = true
+    if (response["@odata.nextLink"]) {
+      nextLink = response["@odata.nextLink"];
+      output.hasMore = true;
     } else {
-      if (!response['@odata.deltaLink']) throw new Error(`Delta link missing: ${JSON.stringify(response)}`)
-      nextLink = response['@odata.deltaLink']
+      if (!response["@odata.deltaLink"])
+        throw new Error(`Delta link missing: ${JSON.stringify(response)}`);
+      nextLink = response["@odata.deltaLink"];
     }
 
-    output.context = { nextLink }
+    output.context = { nextLink };
 
     // https://dev.onedrive.com/items/view_delta.htm
     // The same item may appear more than once in a delta feed, for various reasons. You should use the last occurrence you see.
     // So remove any duplicate item from the array.
-    const temp = []
-    const seenPaths = []
+    const temp = [];
+    const seenPaths = [];
     for (let i = output.items.length - 1; i >= 0; i--) {
-      const item = output.items[i]
-      if (seenPaths.includes(item.path)) continue
-      temp.splice(0, 0, item)
-      seenPaths.push(item.path)
+      const item = output.items[i];
+      if (seenPaths.includes(item.path)) continue;
+      temp.splice(0, 0, item);
+      seenPaths.push(item.path);
     }
 
-    output.items = temp
+    output.items = temp;
 
-    return output
+    return output;
   }
 }
 
-module.exports = { FileApiDriverOneDrive }
+module.exports = { FileApiDriverOneDrive };

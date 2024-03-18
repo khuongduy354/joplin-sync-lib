@@ -1,4 +1,4 @@
-import moment from "moment"
+import moment from "moment";
 // type ConditionHandler = ()=> boolean;
 
 // class Time {
@@ -142,7 +142,6 @@ import moment from "moment"
 // 	public sleep(seconds: number) {
 // 		return this.msleep(seconds * 1000);
 // 	}
-
 
 // 	public goBackInTime(startDate: any, n: number, period: any) {
 // 		// period is a string (eg. "day", "week", "month", "year" ), n is an integer
