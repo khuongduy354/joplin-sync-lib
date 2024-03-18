@@ -3,7 +3,7 @@ import { logger } from "../../helpers/logger";
 import { singleton } from "../../singleton";
 import {Buffer} from "buffer";
 
-class OneDriveApi{
+export class OneDriveApi{
 
 	private clientId_: string;
 	private clientSecret_: string;

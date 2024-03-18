@@ -1,4 +1,4 @@
-abstract class BaseFileApiAdapter {
+abstract class BaseFileApiDriver {
     protected api_: any;
 
     constructor(api: any) {

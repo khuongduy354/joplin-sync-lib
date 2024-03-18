@@ -70,7 +70,7 @@ async function tryAndRepeat(fn: Function, count: number) {
 	// }
 }
 
-class FileApi{
+export class FileApi{
 
 	private baseDir_: any;
 	private driver_: any;

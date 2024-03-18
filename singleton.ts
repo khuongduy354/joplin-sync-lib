@@ -1,4 +1,4 @@
-import FsDriverNode from "./FsApi/FsDriverNode";
+import FsDriverNode from "./FsDriver/FsDriverNode";
 import * as fs from "fs-extra";
 import zlib from "zlib";
 import timers from "timers";
