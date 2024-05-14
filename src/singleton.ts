@@ -14,6 +14,7 @@ abstract class AbstractSingleTon {
   abstract setupDb(_db: any): void;
   abstract db(): any;
 }
+
 export class SingleTon extends AbstractSingleTon {
   protected fsDriver_: FsDriverNode = null;
   protected _db: any = null;
@@ -172,8 +173,8 @@ export class SingleTon extends AbstractSingleTon {
           request.on("timeout", () => {
             request.destroy(
               new Error(
-                `Request timed out. Timeout value: ${requestOptions.timeout}ms.`,
-              ),
+                `Request timed out. Timeout value: ${requestOptions.timeout}ms.`
+              )
             );
           });
 

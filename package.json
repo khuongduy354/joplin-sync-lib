@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc --project tsconfig.json",
-    "watch": "tsnd --respawn --transpileOnly ./src/index.ts",
+    "dev": "tsnd --respawn --transpile-only src/index.ts",
     "run": "node dist/index.js"
   },
   "keywords": [],

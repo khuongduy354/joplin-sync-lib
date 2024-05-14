@@ -1,7 +1,9 @@
-import FsDriverBase, { Stat } from "./fs-driver-base";
-import time from "./time";
+import FsDriverBase, { Stat } from "./FsDriverBase";
+// import time from "./time";
 const md5File = require("md5-file");
 const fs = require("fs-extra");
+
+let time: any = {};
 
 export default class FsDriverNode extends FsDriverBase {
   private fsErrorToJsError_(error: any, path: string = null) {
@@ -126,7 +128,7 @@ export default class FsDriverNode extends FsDriverBase {
         path,
         stat,
         output,
-        options,
+        options
       );
     }
     return output;

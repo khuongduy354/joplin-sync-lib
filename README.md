@@ -19,4 +19,11 @@ function main() {
   syncTarget.initSynchronizer();      
   syncTarget.synchronizer().then(syncer => syncer.start()); 
 }
+``` 
+
+# Run from source  
+```js
+npm run dev  // use ts-node-dev to run
 ```
+
+

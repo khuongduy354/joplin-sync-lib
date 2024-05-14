@@ -1,6 +1,7 @@
-import time from "./time";
-import Setting from "./models/Setting";
-import { filename, fileExtension } from "./path-utils";
+// import time from "./time";
+let time: any = {};
+import Setting from "@joplin/lib/models/Setting";
+import { filename, fileExtension } from "@joplin/lib/path-utils";
 const md5 = require("md5");
 import { Buffer } from "buffer";
 
@@ -28,7 +29,7 @@ export default class FsDriverBase {
   public async appendFile(
     _path: string,
     _content: string,
-    _encoding = "base64",
+    _encoding = "base64"
   ): Promise<any> {
     throw new Error("Not implemented: appendFile");
   }
@@ -61,7 +62,7 @@ export default class FsDriverBase {
   public async readFileChunk(
     _handle: any,
     _length: number,
-    _encoding = "base64",
+    _encoding = "base64"
   ): Promise<string> {
     throw new Error("Not implemented: readFileChunk");
   }
@@ -76,7 +77,7 @@ export default class FsDriverBase {
 
   public async readDirStats(
     _path: string,
-    _options: ReadDirStatsOptions = null,
+    _options: ReadDirStatsOptions = null
   ): Promise<Stat[]> {
     throw new Error("Not implemented: readDirStats");
   }
@@ -97,7 +98,7 @@ export default class FsDriverBase {
   public async writeFile(
     _path: string,
     _content: string,
-    _encoding = "base64",
+    _encoding = "base64"
   ): Promise<void> {
     throw new Error("Not implemented");
   }
@@ -118,7 +119,7 @@ export default class FsDriverBase {
     const resolvedPath = this.resolve(baseDir, relativePath);
     if (resolvedPath.indexOf(resolvedBaseDir) !== 0)
       throw new Error(
-        `Resolved path for relative path "${relativePath}" is not within base directory "${baseDir}" (Was resolved to ${resolvedPath})`,
+        `Resolved path for relative path "${relativePath}" is not within base directory "${baseDir}" (Was resolved to ${resolvedPath})`
       );
     return resolvedPath;
   }
@@ -133,7 +134,7 @@ export default class FsDriverBase {
 
   public async appendBinaryReadableToFile(
     path: string,
-    readable: { read(): number[] | null },
+    readable: { read(): number[] | null }
   ) {
     let data: number[] | null = null;
     while ((data = readable.read()) !== null) {
@@ -147,7 +148,7 @@ export default class FsDriverBase {
     basePath: string,
     stat: Stat,
     output: Stat[],
-    options: ReadDirStatsOptions,
+    options: ReadDirStatsOptions
   ): Promise<Stat[]> {
     if (options.recursive && stat.isDirectory()) {
       const subPath = `${basePath}/${stat.path}`;
@@ -165,7 +166,7 @@ export default class FsDriverBase {
   public async findUniqueFilename(
     name: string,
     reservedNames: string[] = null,
-    markdownSafe = false,
+    markdownSafe = false
   ): Promise<string> {
     if (reservedNames === null) {
       reservedNames = [];
@@ -225,7 +226,9 @@ export default class FsDriverBase {
     const cssString = Array.isArray(cssStrings)
       ? cssStrings.join("\n")
       : cssStrings;
-    const cssFilePath = `${Setting.value("tempDir")}/${md5(escape(cssString))}.css`;
+    const cssFilePath = `${Setting.value("tempDir")}/${md5(
+      escape(cssString)
+    )}.css`;
     if (!(await this.exists(cssFilePath))) {
       await this.writeFile(cssFilePath, cssString, "utf8");
     }
