@@ -3,13 +3,15 @@ import { FileSystemSyncTarget } from "./SyncTarget/FileSystemSyncTarget";
 
 async function main() {
   // path to sqlite database file
-  const path = "src/sample_app/Storage/database1";
-  // onedrive auth token
-  const token = "some token here";
+  const path1 = "src/sample_app/Storage/database1.sqlite";
+  try {
+    const db = await initDb(path1);
+  } catch (e) {
+    console.log(e);
+  }
 
-  const db = initDb(path);
   // const db: any = null;
-  const syncTarget = new FileSystemSyncTarget(db);
+  // const syncTarget = new FileSystemSyncTarget(db);
 
   //   syncTarget.initFileApi();
   //   syncTarget.initSynchronizer();

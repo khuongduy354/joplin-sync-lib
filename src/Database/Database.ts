@@ -1,7 +1,10 @@
-import _sqlite3 from "sqlite3";
+import JoplinDatabase from "@joplin/lib/JoplinDatabase";
+const DatabaseDriverNode = require("./database-driver-node.js");
 
-export const initDb = (path: string) => {
-  const sqlite3 = _sqlite3.verbose();
-  const db = new sqlite3.Database(path);
+export const initDb = async (path: string) => {
+  const db = new JoplinDatabase(new DatabaseDriverNode());
+  //@ts-ignore
+  db.setLogger(console);
+  await db.open({ name: path });
   return db;
 };
