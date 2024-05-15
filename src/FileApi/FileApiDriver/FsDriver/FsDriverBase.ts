@@ -239,6 +239,13 @@ export default class FsDriverBase {
     };
   }
 
+  public async setTimestamp(
+    _path: string,
+    _timestampDate: Date
+  ): Promise<void> {
+    throw new Error("Not implemented: setTimestamp");
+  }
+
   public async tarExtract(_options: any) {
     throw new Error("Not implemented: tarExtract");
   }

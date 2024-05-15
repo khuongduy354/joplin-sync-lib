@@ -1,3 +1,4 @@
+import { FileApi } from "../FileApi/FileApi";
 import { logger } from "../helpers/logger";
 
 export default class Synchronizer {
@@ -90,7 +91,7 @@ export default class Synchronizer {
       this.db(),
       this.lockHandler(),
       this.lockClientType(),
-      this.clientId_,
+      this.clientId_
     );
     return this.migrationHandler_;
   }
@@ -158,8 +159,8 @@ export default class Synchronizer {
         _(
           "Fetched items: %d/%d.",
           report.fetchingProcessed,
-          report.fetchingTotal,
-        ),
+          report.fetchingTotal
+        )
       );
     if (report.cancelling && !report.completedTime)
       lines.push(_("Cancelling..."));
@@ -168,15 +169,15 @@ export default class Synchronizer {
         _(
           "Completed: %s (%s)",
           time.formatMsToLocal(report.completedTime),
-          this.completionTime(report),
-        ),
+          this.completionTime(report)
+        )
       );
     if (this.reportHasErrors(report))
       lines.push(
         _(
           "Last error: %s",
-          report.errors[report.errors.length - 1].toString().substr(0, 500),
-        ),
+          report.errors[report.errors.length - 1].toString().substr(0, 500)
+        )
       );
 
     return lines;
@@ -193,7 +194,7 @@ export default class Synchronizer {
     local: any = null,
     remote: RemoteItem = null,
     message: string = null,
-    actionCount = 1,
+    actionCount = 1
   ) {
     const line = ["Sync"];
     line.push(action);
@@ -326,7 +327,7 @@ export default class Synchronizer {
       locks,
       currentDate,
       this.lockHandler().lockTtl,
-      LockType.Exclusive,
+      LockType.Exclusive
     );
     if (hasActiveExclusiveLock) return "hasExclusiveLock";
 
@@ -336,7 +337,7 @@ export default class Synchronizer {
       this.lockHandler().lockTtl,
       LockType.Sync,
       this.lockClientType(),
-      this.clientId_,
+      this.clientId_
     );
     if (!hasActiveSyncLock) return "syncLockGone";
 
@@ -357,7 +358,7 @@ export default class Synchronizer {
     if (this.syncTargetIsLocked_)
       throw new JoplinError(
         "Sync target is locked - aborting API call",
-        "lockError",
+        "lockError"
       );
 
     try {
@@ -371,7 +372,7 @@ export default class Synchronizer {
       if (lockStatus) {
         throw new JoplinError(
           `Sync target lock error: ${lockStatus}. Original error was: ${error.message}`,
-          "lockError",
+          "lockError"
         );
       } else {
         throw error;
@@ -391,8 +392,8 @@ export default class Synchronizer {
       const error: any = new Error(
         sprintf(
           "Synchronisation is already in progress. State: %s",
-          this.state(),
-        ),
+          this.state()
+        )
       );
       error.code = "alreadyStarted";
       throw error;
@@ -430,7 +431,11 @@ export default class Synchronizer {
       "starting",
       null,
       null,
-      `Starting synchronisation to target ${syncTargetId}... supportsAccurateTimestamp = ${this.api().supportsAccurateTimestamp}; supportsMultiPut = ${this.api().supportsMultiPut}} [${synchronizationId}]`,
+      `Starting synchronisation to target ${syncTargetId}... supportsAccurateTimestamp = ${
+        this.api().supportsAccurateTimestamp
+      }; supportsMultiPut = ${
+        this.api().supportsMultiPut
+      }} [${synchronizationId}]`
     );
 
     const handleCannotSyncItem = async (
@@ -438,13 +443,13 @@ export default class Synchronizer {
       syncTargetId: any,
       item: any,
       cannotSyncReason: string,
-      itemLocation: any = null,
+      itemLocation: any = null
     ) => {
       await ItemClass.saveSyncDisabled(
         syncTargetId,
         item,
         cannotSyncReason,
-        itemLocation,
+        itemLocation
       );
     };
 
@@ -476,7 +481,7 @@ export default class Synchronizer {
         // other issue we don't want sync to fail because of this.
         logger.error(
           "Could not update share because an item is readonly:",
-          error,
+          error
         );
       } else {
         throw error;
@@ -521,7 +526,7 @@ export default class Synchronizer {
         if (syncTargetIsNew && localInfo.activeMasterKeyId) {
           localInfo = setMasterKeyHasBeenUsed(
             localInfo,
-            localInfo.activeMasterKeyId,
+            localInfo.activeMasterKeyId
           );
         }
 
@@ -533,26 +538,26 @@ export default class Synchronizer {
           if (newInfo.activeMasterKeyId)
             newInfo = setMasterKeyHasBeenUsed(
               newInfo,
-              newInfo.activeMasterKeyId,
+              newInfo.activeMasterKeyId
             );
           const previousE2EE = localInfo.e2ee;
           logger.info(
             "Sync target info differs between local and remote - merging infos: ",
-            newInfo.toObject(),
+            newInfo.toObject()
           );
 
           await this.lockHandler().acquireLock(
             LockType.Exclusive,
             this.lockClientType(),
             this.clientId_,
-            { clearExistingSyncLocksFromTheSameClient: true },
+            { clearExistingSyncLocksFromTheSameClient: true }
           );
           await uploadSyncInfo(this.api(), newInfo);
           await saveLocalSyncInfo(newInfo);
           await this.lockHandler().releaseLock(
             LockType.Exclusive,
             this.lockClientType(),
-            this.clientId_,
+            this.clientId_
           );
 
           // console.info('NEW', newInfo);
@@ -574,7 +579,7 @@ export default class Synchronizer {
         if (error.code === "outdatedSyncTarget") {
           Setting.setValue(
             "sync.upgradeState",
-            Setting.SYNC_UPGRADE_STATE_SHOULD_DO,
+            Setting.SYNC_UPGRADE_STATE_SHOULD_DO
           );
         }
         throw error;
@@ -583,13 +588,13 @@ export default class Synchronizer {
       syncLock = await this.lockHandler().acquireLock(
         LockType.Sync,
         this.lockClientType(),
-        this.clientId_,
+        this.clientId_
       );
 
       this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
         logger.warn(
           "Could not refresh lock - cancelling sync. Error was:",
-          error,
+          error
         );
         this.syncTargetIsLocked_ = true;
         void this.cancel();
@@ -611,7 +616,7 @@ export default class Synchronizer {
               local,
               logSyncOperation,
               message,
-              actionCount,
+              actionCount
             );
           },
           (fnName, ...args) => {
@@ -619,7 +624,7 @@ export default class Synchronizer {
           },
           (action) => {
             return this.dispatch(action);
-          },
+          }
         );
       } // DELETE_REMOTE STEP
 
@@ -645,8 +650,8 @@ export default class Synchronizer {
 
           await itemUploader.preUploadItems(
             result.items.filter((it: any) =>
-              result.neverSyncedItemIds.includes(it.id),
-            ),
+              result.neverSyncedItemIds.includes(it.id)
+            )
           );
 
           for (let i = 0; i < locals.length; i++) {
@@ -667,13 +672,13 @@ export default class Synchronizer {
               throw new JoplinError(
                 sprintf(
                   "Processing a path that has already been done: %s. sync_time was not updated? Remote item has an updated_time in the future?",
-                  path,
+                  path
                 ),
-                "processingPathTwice",
+                "processingPathTwice"
               );
 
             const remote: RemoteItem = result.neverSyncedItemIds.includes(
-              local.id,
+              local.id
             )
               ? null
               : await this.apiCall("stat", path);
@@ -730,7 +735,7 @@ export default class Synchronizer {
               }
               if (!remoteContent)
                 throw new Error(
-                  `Got metadata for path but could not fetch content: ${path}`,
+                  `Got metadata for path but could not fetch content: ${path}`
                 );
               remoteContent = await BaseItem.unserialize(remoteContent);
 
@@ -794,13 +799,13 @@ export default class Synchronizer {
                 // will never finish because we'll always end up
                 // here.
                 logger.info(
-                  `Need to upload a resource, but blob is not present: ${path}`,
+                  `Need to upload a resource, but blob is not present: ${path}`
                 );
                 await handleCannotSyncItem(
                   ItemClass,
                   syncTargetId,
                   local,
-                  "Trying to upload resource, but only metadata is present.",
+                  "Trying to upload resource, but only metadata is present."
                 );
                 action = null;
               } else {
@@ -813,7 +818,7 @@ export default class Synchronizer {
 
                   if (resource.size >= 10 * 1000 * 1000) {
                     logger.warn(
-                      `Uploading a large resource (resourceId: ${local.id}, size:${resource.size} bytes) which may tie up the sync process.`,
+                      `Uploading a large resource (resourceId: ${local.id}, size:${resource.size} bytes) which may tie up the sync process.`
                     );
                   }
 
@@ -825,7 +830,7 @@ export default class Synchronizer {
                   const syncItem = await BaseItem.syncItem(
                     syncTargetId,
                     resource.id,
-                    { fields: ["sync_time", "force_sync"] },
+                    { fields: ["sync_time", "force_sync"] }
                   );
                   if (
                     !syncItem ||
@@ -844,7 +849,7 @@ export default class Synchronizer {
                       ItemClass,
                       syncTargetId,
                       local,
-                      error.message,
+                      error.message
                     );
                     action = null;
                   } else if (error && error.code === ErrorCode.IsReadOnly) {
@@ -852,7 +857,7 @@ export default class Synchronizer {
                     itemIsReadOnly = true;
                     logger.info(
                       "Resource is readonly and cannot be modified - handling it as a conflict:",
-                      local,
+                      local
                     );
                   } else {
                     throw error;
@@ -873,17 +878,17 @@ export default class Synchronizer {
                 )
                   throw new JoplinError(
                     "Testing rejectedByTarget",
-                    "rejectedByTarget",
+                    "rejectedByTarget"
                   );
                 if (this.testingHooks_.indexOf("itemIsReadOnly") >= 0)
                   throw new JoplinError(
                     "Testing isReadOnly",
-                    ErrorCode.IsReadOnly,
+                    ErrorCode.IsReadOnly
                   );
                 await itemUploader.serializeAndUploadItem(
                   ItemClass,
                   path,
-                  local,
+                  local
                 );
               } catch (error) {
                 if (error && error.code === "rejectedByTarget") {
@@ -891,7 +896,7 @@ export default class Synchronizer {
                     ItemClass,
                     syncTargetId,
                     local,
-                    error.message,
+                    error.message
                   );
                   canSync = false;
                 } else if (error && error.code === ErrorCode.IsReadOnly) {
@@ -926,7 +931,7 @@ export default class Synchronizer {
                 await ItemClass.saveSyncTime(
                   syncTargetId,
                   local,
-                  local.updated_time,
+                  local.updated_time
                 );
               }
             }
@@ -939,7 +944,7 @@ export default class Synchronizer {
               local,
               syncTargetId,
               itemIsReadOnly,
-              (action: any) => this.dispatch(action),
+              (action: any) => this.dispatch(action)
             );
 
             completeItemProcessing(path);
@@ -1001,7 +1006,7 @@ export default class Synchronizer {
             null,
             null,
             "Fetching delta items from sync target",
-            remotes.length,
+            remotes.length
           );
 
           const remoteIds = remotes.map((r) => BaseItem.pathToId(r.path));
@@ -1013,7 +1018,7 @@ export default class Synchronizer {
             let needsToDownload = true;
             if (this.api().supportsAccurateTimestamp) {
               const local = locals.find(
-                (l) => l.id === BaseItem.pathToId(remote.path),
+                (l) => l.id === BaseItem.pathToId(remote.path)
               );
               if (local && local.updated_time === remote.jop_updated_time)
                 needsToDownload = false;
@@ -1043,7 +1048,7 @@ export default class Synchronizer {
               "fetchingProcessed",
               null,
               null,
-              "Processing fetched item",
+              "Processing fetched item"
             );
 
             const remote = remotes[i];
@@ -1123,7 +1128,7 @@ export default class Synchronizer {
             ) {
               if (content === null) {
                 logger.warn(
-                  `Remote has been deleted between now and the delta() call? In that case it will be handled during the next sync: ${path}`,
+                  `Remote has been deleted between now and the delta() call? In that case it will be handled during the next sync: ${path}`
                 );
                 continue;
               }
@@ -1144,7 +1149,7 @@ export default class Synchronizer {
                 nextQueries: BaseItem.updateSyncTimeQueries(
                   syncTargetId,
                   content,
-                  time.unixMs(),
+                  time.unixMs()
                 ),
                 changeSource: ItemChange.SOURCE_SYNC,
               };
@@ -1162,8 +1167,10 @@ export default class Synchronizer {
                     ItemClass,
                     syncTargetId,
                     content,
-                    `File "${content.title}" is larger than allowed ${this.maxResourceSize()} bytes. Beyond this limit, the mobile app would crash.`,
-                    BaseItem.SYNC_ITEM_LOCATION_REMOTE,
+                    `File "${
+                      content.title
+                    }" is larger than allowed ${this.maxResourceSize()} bytes. Beyond this limit, the mobile app would crash.`,
+                    BaseItem.SYNC_ITEM_LOCATION_REMOTE
                   );
                   continue;
                 }
@@ -1189,7 +1196,7 @@ export default class Synchronizer {
                 const existingMasterKey = await MasterKey.load(content.id);
                 if (!existingMasterKey) {
                   logger.info(
-                    `Downloaded a master key that was not in info.json - adding it to the store. ID: ${content.id}`,
+                    `Downloaded a master key that was not in info.json - adding it to the store. ID: ${content.id}`
                   );
                   await MasterKey.save(content);
                 }
@@ -1318,8 +1325,8 @@ export default class Synchronizer {
       } else if (error.code === "unknownItemType") {
         this.progressReport_.errors.push(
           _(
-            "Unknown item type downloaded - please upgrade Joplin to the latest version",
-          ),
+            "Unknown item type downloaded - please upgrade Joplin to the latest version"
+          )
         );
         logger.error(error);
       } else {
@@ -1339,7 +1346,7 @@ export default class Synchronizer {
       await this.lockHandler().releaseLock(
         LockType.Sync,
         this.lockClientType(),
-        this.clientId_,
+        this.clientId_
       );
     }
 
@@ -1366,7 +1373,7 @@ export default class Synchronizer {
       "finished",
       null,
       null,
-      `Synchronisation finished [${synchronizationId}]`,
+      `Synchronisation finished [${synchronizationId}]`
     );
 
     await this.logSyncSummary(this.progressReport_);
@@ -1376,7 +1383,7 @@ export default class Synchronizer {
     });
 
     await checkDisabledSyncItemsNotification((action: any) =>
-      this.dispatch(action),
+      this.dispatch(action)
     );
 
     this.onProgress_ = function () {};

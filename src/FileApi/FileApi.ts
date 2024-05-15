@@ -1,8 +1,8 @@
-import { logger } from "../helpers/logger";
+import { logger, LoggerWrapper } from "../helpers/logger";
 import { singleton } from "../singleton";
 import helper from "../helpers/index";
 const { isHidden } = require("path-utils");
-import { LockClientType, LockType } from "../Locks/Locks";
+import { LockClientType, LockType } from "../Synchronizer/Locks/Locks";
 const Mutex = require("async-mutex").Mutex;
 
 export interface MultiPutItem {
@@ -70,7 +70,37 @@ async function tryAndRepeat(fn: Function, count: number) {
   // }
 }
 
-export class FileApi {
+export interface DeltaOptions {
+  allItemIdsHandler(): Promise<string[]>;
+  logger?: LoggerWrapper;
+  wipeOutFailSafe: boolean;
+}
+
+export enum GetOptionsTarget {
+  String = "string",
+  File = "file",
+}
+
+export interface GetOptions {
+  target?: GetOptionsTarget;
+  path?: string;
+  encoding?: string;
+
+  source?: string;
+}
+
+export interface PutOptions {
+  path?: string;
+  source?: string;
+}
+
+export interface ItemStat {
+  path: string;
+  updated_time: number;
+  isDir: boolean;
+}
+
+class FileApi {
   private baseDir_: any;
   private driver_: any;
   private logger_ = logger;
@@ -121,7 +151,9 @@ export class FileApi {
   }
 
   private async fetchRemoteDateOffset_() {
-    const tempFile = `${this.tempDirName()}/timeCheck${Math.round(Math.random() * 1000000)}.txt`;
+    const tempFile = `${this.tempDirName()}/timeCheck${Math.round(
+      Math.random() * 1000000
+    )}.txt`;
     const startTime = Date.now();
     await this.put(tempFile, "timeCheck");
 
@@ -170,7 +202,7 @@ export class FileApi {
       } catch (error) {
         logger.warn(
           "Could not retrieve remote date - defaulting to device date:",
-          error,
+          error
         );
         this.remoteDateOffset_ = 0;
         this.remoteDateNextCheckTime_ = Date.now() + 60 * 1000;
@@ -262,7 +294,7 @@ export class FileApi {
 
     const result: PaginatedList = await tryAndRepeat(
       () => this.driver_.list(this.fullPath(path), options),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
 
     if (!options.includeHidden) {
@@ -279,7 +311,7 @@ export class FileApi {
 
     if (options.syncItemsOnly) {
       result.items = result.items.filter(
-        (f: any) => !f.isDir && helper.isSystemPath(f.path),
+        (f: any) => !f.isDir && helper.isSystemPath(f.path)
       );
     }
 
@@ -291,7 +323,7 @@ export class FileApi {
     logger.debug(`setTimestamp ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.setTimestamp(this.fullPath(path), timestampMs),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
     // return this.driver_.setTimestamp(this.fullPath(path), timestampMs);
   }
@@ -300,7 +332,7 @@ export class FileApi {
     logger.debug(`mkdir ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.mkdir(this.fullPath(path)),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
@@ -309,7 +341,7 @@ export class FileApi {
 
     const output = await tryAndRepeat(
       () => this.driver_.stat(this.fullPath(path)),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
 
     if (!output) return output;
@@ -324,7 +356,7 @@ export class FileApi {
     logger.debug(`get ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.get(this.fullPath(path), options),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
@@ -338,7 +370,7 @@ export class FileApi {
 
     return tryAndRepeat(
       () => this.driver_.put(this.fullPath(path), content, options),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
@@ -347,7 +379,7 @@ export class FileApi {
       throw new Error("Multi PUT not supported");
     return tryAndRepeat(
       () => this.driver_.multiPut(items, options),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
@@ -355,7 +387,7 @@ export class FileApi {
     logger.debug(`delete ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.delete(this.fullPath(path)),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
@@ -364,7 +396,7 @@ export class FileApi {
     logger.debug(`move ${this.fullPath(oldPath)} => ${this.fullPath(newPath)}`);
     return tryAndRepeat(
       () => this.driver_.move(this.fullPath(oldPath), this.fullPath(newPath)),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
@@ -376,7 +408,7 @@ export class FileApi {
   public clearRoot() {
     return tryAndRepeat(
       () => this.driver_.clearRoot(this.baseDir()),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
@@ -384,33 +416,33 @@ export class FileApi {
     logger.debug(`delta ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.delta(this.fullPath(path), options),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
   public async acquireLock(
     type: LockType,
     clientType: LockClientType,
-    clientId: string,
+    clientId: string
   ): Promise<Lock> {
     if (!this.supportsLocks)
       throw new Error("Sync target does not support built-in locks");
     return tryAndRepeat(
       () => this.driver_.acquireLock(type, clientType, clientId),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
   public async releaseLock(
     type: LockType,
     clientType: LockClientType,
-    clientId: string,
+    clientId: string
   ) {
     if (!this.supportsLocks)
       throw new Error("Sync target does not support built-in locks");
     return tryAndRepeat(
       () => this.driver_.releaseLock(type, clientType, clientId),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 
@@ -419,7 +451,7 @@ export class FileApi {
       throw new Error("Sync target does not support built-in locks");
     return tryAndRepeat(
       () => this.driver_.listLocks(),
-      this.requestRepeatCount(),
+      this.requestRepeatCount()
     );
   }
 }
@@ -473,10 +505,10 @@ async function basicDelta(path: string, getDirStatFn: Function, options: any) {
 
   if (context.timestamp > Date.now()) {
     logger.warn(
-      `BasicDelta: Context timestamp is greater than current time: ${context.timestamp}`,
+      `BasicDelta: Context timestamp is greater than current time: ${context.timestamp}`
     );
     logger.warn(
-      "BasicDelta: Sync will continue but it is likely that nothing will be synced",
+      "BasicDelta: Sync will continue but it is likely that nothing will be synced"
     );
   }
 
@@ -578,7 +610,7 @@ async function basicDelta(path: string, getDirStatFn: Function, options: any) {
     // they have switched off the fail-safe.
     if (options.wipeOutFailSafe && percentDeleted >= 0.9)
       throw new Error(
-        "More than 90% of the notes are going to be deleted. This is likely a configuration error or bug. Sync has been aborted to prevent data loss.",
+        "More than 90% of the notes are going to be deleted. This is likely a configuration error or bug. Sync has been aborted to prevent data loss."
       );
 
     output = output.concat(deletedItems);
@@ -602,3 +634,5 @@ async function basicDelta(path: string, getDirStatFn: Function, options: any) {
     items: output,
   };
 }
+
+export { FileApi, basicDelta };
