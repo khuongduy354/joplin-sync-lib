@@ -609,7 +609,6 @@ export default class Synchronizer {
         throw error;
       }
 
-      // TODO: fix lock later (easy): because lock dependent on shim, just move lock here
       syncLock = await this.lockHandler().acquireLock(
         LockType.Sync,
         this.lockClientType(),
@@ -800,6 +799,16 @@ export default class Synchronizer {
         break;
         // if (!result.hasMore) break;
       }
+
+      if (syncLock) {
+        this.lockHandler().stopAutoLockRefresh(syncLock);
+        await this.lockHandler().releaseLock(
+          LockType.Sync,
+          this.lockClientType(),
+          this.clientId_
+        );
+      }
+      this.syncTargetIsLocked_ = false;
     } catch (err) {
       throw err;
     }
