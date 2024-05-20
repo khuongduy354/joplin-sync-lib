@@ -1,7 +1,7 @@
 import { logger, LoggerWrapper } from "../helpers/logger";
 import { singleton } from "../singleton";
 import helper from "../helpers/index";
-const { isHidden } = require("path-utils");
+import { isHidden } from "@joplin/utils/path";
 import { LockClientType, LockType } from "../Synchronizer/Locks/Locks";
 const Mutex = require("async-mutex").Mutex;
 

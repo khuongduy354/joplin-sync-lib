@@ -1,6 +1,6 @@
 import { BaseSyncTarget } from "./BaseSyncTarget";
 import { FileApi } from "../FileApi/FileApi";
-import FileApiDriverLocal from "../FileApi/FileApiDriver/FsDriver/file-api-driver-local";
+import FileApiDriverLocal from "../FileApi/Driver/FsDriver/file-api-driver-local";
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { AppType } from "@joplin/lib/models/Setting";
 
@@ -25,12 +25,13 @@ export class FileSystemSyncTarget extends BaseSyncTarget {
     return true;
   }
 
-  public async initFileApi() {
-    const syncPath = "/tmp/joplin-sync-filesystem/";
+  public async initFileApi(syncPath: string) {
+    // const syncPath = "/tmp/joplin-sync-filesystem/";
     const driver = new FileApiDriverLocal();
     const fileApi = new FileApi(syncPath, driver);
     fileApi.setSyncTargetId(FileSystemSyncTarget.id());
     await driver.mkdir(syncPath);
+    this.fileApi_ = fileApi;
     return fileApi;
   }
 

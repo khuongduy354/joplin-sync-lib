@@ -89,14 +89,16 @@ export abstract class BaseSyncTarget {
     throw new Error("initSynchronizer() not implemented");
   }
 
-  protected async initFileApi(): Promise<any> {
+  protected async initFileApi(syncPath: string): Promise<any> {
     throw new Error("initFileApi() not implemented");
   }
 
   public async fileApi() {
-    if (this.fileApi_) return this.fileApi_;
-    this.fileApi_ = await this.initFileApi();
-    return this.fileApi_;
+    if (this.fileApi_) {
+      return this.fileApi_;
+    } else {
+      throw new Error("File API not initialized");
+    }
   }
 
   // Usually each sync target should create and setup its own file API via initFileApi()
@@ -143,7 +145,7 @@ export abstract class BaseSyncTarget {
   }
 
   public static async checkConfig(_options: any): Promise<CheckConfigResult> {
-    throw new Error("Not implemented");
+    throw new Error("CheckConfig Not implemented");
   }
 
   public async syncStarted() {

@@ -100,7 +100,7 @@ export default class FsDriverBase {
     _content: string,
     _encoding = "base64"
   ): Promise<void> {
-    throw new Error("Not implemented");
+    throw new Error("Not implemented: writeFile");
   }
 
   public async md5File(_path: string): Promise<string> {
