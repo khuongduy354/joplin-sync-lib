@@ -1,5 +1,25 @@
+import JoplinDatabase from "@joplin/lib/JoplinDatabase";
 import { FileApi } from "../FileApi/FileApi";
 import { logger } from "../helpers/logger";
+import { AppType } from "@joplin/lib/models/Setting";
+import ItemUploader from "@joplin/lib/services/synchronizer/ItemUploader";
+import {
+  Dirnames,
+  SyncAction,
+} from "@joplin/lib/services/synchronizer/utils/types";
+import { fetchSyncInfo } from "./syncInfoUtils";
+import time from "@joplin/lib/time";
+import { LockClientType, LockType } from "./Locks/Locks";
+import LockHandler, {
+  appTypeToLockType,
+} from "@joplin/lib/services/synchronizer/LockHandler";
+import MigrationHandler from "@joplin/lib/services/synchronizer/MigrationHandler";
+import BaseItem from "@joplin/lib/models/BaseItem";
+import { RemoteItem } from "@joplin/lib/file-api";
+import JoplinError from "@joplin/lib/JoplinError";
+import BaseModel from "@joplin/lib/BaseModel";
+import { ErrorCode } from "@joplin/lib/errors";
+import { parameters_ } from "../helpers/parameter";
 
 export default class Synchronizer {
   public static verboseMode = true;
@@ -15,10 +35,10 @@ export default class Synchronizer {
   private clientId_: string;
   private lockHandler_: LockHandler;
   private migrationHandler_: MigrationHandler;
-  private encryptionService_: EncryptionService = null;
-  private resourceService_: ResourceService = null;
+  // private encryptionService_: EncryptionService = null;
+  // private resourceService_: ResourceService = null;
   private syncTargetIsLocked_ = false;
-  private shareService_: ShareService = null;
+  // private shareService_: ShareService = null;
   private lockClientType_: LockClientType = null;
 
   // Debug flags are used to test certain hard-to-test conditions
@@ -36,8 +56,8 @@ export default class Synchronizer {
     this.db_ = db;
     this.api_ = api;
     this.appType_ = appType;
-    this.clientId_ = Setting.value("clientId");
-
+    //TODO: change params
+    this.clientId_ = parameters_.test.id;
     this.onProgress_ = function () {};
     this.progressReport_ = {};
 
@@ -224,7 +244,7 @@ export default class Synchronizer {
     }
 
     if (!["fetchingProcessed", "fetchingTotal"].includes(action))
-      syncDebugLog.info(line.join(": "));
+      console.info(line.join(": "));
 
     if (!this.progressReport_[action]) this.progressReport_[action] = 0;
     this.progressReport_[action] += actionCount;
@@ -379,6 +399,410 @@ export default class Synchronizer {
       }
     }
   }
+  public async uploadItem(options: any = null) {
+    // PREPARATION
+    if (!options) options = {};
+
+    if (this.state() !== "idle") {
+      const error: any = new Error(
+        "Synchronisation is already in progress. State: %s" + this.state()
+      );
+      error.code = "alreadyStarted";
+      throw error;
+    }
+
+    this.state_ = "in_progress";
+
+    this.onProgress_ = options.onProgress ? options.onProgress : function () {};
+    this.progressReport_ = { errors: [] };
+
+    const lastContext = options.context ? options.context : {};
+
+    // const syncSteps = options.syncSteps
+    //   ? options.syncSteps
+    //   : ["update_remote", "delete_remote", "delta"];
+
+    // The default is to log errors, but when testing it's convenient to be able to catch and verify errors
+    // const throwOnError = options.throwOnError === true;
+
+    const syncTargetId = this.api().syncTargetId();
+
+    this.syncTargetIsLocked_ = false;
+    this.cancelling_ = false;
+
+    const synchronizationId = time.unixMs().toString();
+
+    const outputContext = { ...lastContext };
+
+    this.progressReport_.startTime = time.unixMs();
+
+    this.dispatch({ type: "SYNC_STARTED" });
+    // eventManager.emit(EventName.SyncStart);
+
+    // this.logSyncOperation(
+    //   "starting",
+    //   null,
+    //   null,
+    //   `Starting synchronisation to target ${syncTargetId}... supportsAccurateTimestamp = ${
+    //     this.api().supportsAccurateTimestamp
+    //   }; supportsMultiPut = ${
+    //     this.api().supportsMultiPut
+    //   }} [${synchronizationId}]`
+    // );
+
+    // const handleCannotSyncItem = async (
+    //   ItemClass: any,
+    //   syncTargetId: any,
+    //   item: any,
+    //   cannotSyncReason: string,
+    //   itemLocation: any = null
+    // ) => {
+    //   await ItemClass.saveSyncDisabled(
+    //     syncTargetId,
+    //     item,
+    //     cannotSyncReason,
+    //     itemLocation
+    //   );
+    // };
+
+    // We index resources before sync mostly to flag any potential orphan
+    // resource before it is being synced. That way, it can potentially be
+    // auto-deleted at a later time. Indexing resources is fast so it's fine
+    // to call it every time here.
+    //
+    // https://github.com/laurent22/joplin/issues/932#issuecomment-933736405
+
+    // TODO: resource service
+    // try {
+    //   if (this.resourceService()) {
+    //     logger.info("Indexing resources...");
+    //     await this.resourceService().indexNoteResources();
+    //   }
+    // } catch (error) {
+    //   logger.error("Error indexing resources:", error);
+    // }
+
+    // Before synchronising make sure all share_id properties are set
+    // correctly so as to share/unshare the right items.
+
+    // TODO: share id relook feature
+    // try {
+    //   await Folder.updateAllShareIds(this.resourceService());
+    //   if (this.shareService_) await this.shareService_.checkShareConsistency();
+    // } catch (error) {
+    //   if (error && error.code === ErrorCode.IsReadOnly) {
+
+    // We ignore it because the functions above tried to modify a
+    // read-only item and failed. Normally it shouldn't happen since
+    // the UI should prevent, but if there's a bug in the UI or some
+    // other issue we don't want sync to fail because of this.
+    // logger.error(
+    //       "Could not update share because an item is readonly:",
+    //       error
+    //     );
+    //   } else {
+    //     throw error;
+    //   }
+    // }
+
+    const itemUploader = new ItemUploader(this.api(), this.apiCall);
+
+    let errorToThrow = null;
+    let syncLock = null;
+
+    try {
+      await this.api().initialize();
+      this.api().setTempDirName(Dirnames.Temp);
+
+      try {
+        let remoteInfo = await fetchSyncInfo(this.api());
+        logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
+        // eventManager.emit(EventName.SessionEstablished);
+
+        let syncTargetIsNew = false;
+
+        if (!remoteInfo.version) {
+          // TODO: initial sync on lib
+          throw new Error(
+            "Sync target must be available before uploading item"
+          );
+          // logger.info("Sync target is new - setting it up...");
+          // await this.migrationHandler().upgrade(Setting.value("syncVersion"));
+          // remoteInfo = await fetchSyncInfo(this.api());
+          // syncTargetIsNew = true;
+        }
+
+        logger.info("Sync target is already setup - checking it...");
+
+        // TODO: set a library supported sync target version (sync info)
+        // TODO: E2E
+        // await this.migrationHandler().checkCanSync(remoteInfo);
+
+        // const appVersion = shim.appVersion();
+        // if (appVersion !== "unknown") checkIfCanSync(remoteInfo, appVersion);
+
+        // let localInfo = await localSyncInfo();
+        // logger.info("Sync target local info:", localInfo.filterSyncInfo());
+
+        // localInfo = await this.setPpkIfNotExist(localInfo, remoteInfo);
+
+        // if (syncTargetIsNew && localInfo.activeMasterKeyId) {
+        //   localInfo = setMasterKeyHasBeenUsed(
+        //     localInfo,
+        //     localInfo.activeMasterKeyId
+        //   );
+        // }
+
+        // console.info('LOCAL', localInfo);
+        // console.info('REMOTE', remoteInfo);
+
+        // if (!syncInfoEquals(localInfo, remoteInfo)) {
+        //   let newInfo = mergeSyncInfos(localInfo, remoteInfo);
+        //   if (newInfo.activeMasterKeyId)
+        //     newInfo = setMasterKeyHasBeenUsed(
+        //       newInfo,
+        //       newInfo.activeMasterKeyId
+        //     );
+        //   const previousE2EE = localInfo.e2ee;
+        //   logger.info(
+        //     "Sync target info differs between local and remote - merging infos: ",
+        //     newInfo.toObject()
+        //   );
+
+        // await this.lockHandler().acquireLock(
+        //   LockType.Exclusive,
+        //   this.lockClientType(),
+        //   this.clientId_,
+        //   { clearExistingSyncLocksFromTheSameClient: true }
+        // );
+        // await uploadSyncInfo(this.api(), newInfo);
+        // await saveLocalSyncInfo(newInfo);
+        // await this.lockHandler().releaseLock(
+        //   LockType.Exclusive,
+        //   this.lockClientType(),
+        //   this.clientId_
+        // );
+
+        // console.info('NEW', newInfo);
+
+        //     if (newInfo.e2ee !== previousE2EE) {
+        //       if (newInfo.e2ee) {
+        //         const mk = getActiveMasterKey(newInfo);
+        //         await setupAndEnableEncryption(this.encryptionService(), mk);
+        //       } else {
+        //         await setupAndDisableEncryption(this.encryptionService());
+        //       }
+        //     }
+        //   } else {
+        //     // Set it to remote anyway so that timestamps are the same
+        //     // Note: that's probably not needed anymore?
+        //     // await uploadSyncInfo(this.api(), remoteInfo);
+        //   }
+      } catch (error) {
+        // if (error.code === "outdatedSyncTarget") {
+        //   Setting.setValue(
+        //     "sync.upgradeState",
+        //     Setting.SYNC_UPGRADE_STATE_SHOULD_DO
+        //   );
+        // }
+        throw error;
+      }
+
+      // TODO: fix lock later (easy): because lock dependent on shim, just move lock here
+      // syncLock = await this.lockHandler().acquireLock(
+      //   LockType.Sync,
+      //   this.lockClientType(),
+      //   this.clientId_
+      // );
+
+      // this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
+      //   logger.warn(
+      //     "Could not refresh lock - cancelling sync. Error was:",
+      //     error
+      //   );
+      //   this.syncTargetIsLocked_ = true;
+      //   void this.cancel();
+      // });
+
+      // ========================================================================
+      // UPLOAD
+      // ------------------------------------------------------------------------
+      // Find all the items that have been changed since the
+      // last sync and apply the changes to remote.
+      // ========================================================================
+
+      const donePaths: string[] = [];
+
+      const completeItemProcessing = (path: string) => {
+        donePaths.push(path);
+      };
+
+      while (true) {
+        // TODO: handle cancelling here
+        if (this.cancelling()) break;
+
+        // TODO: batch here to 10
+        const locals = options.items as BaseItem[];
+        // const locals = result.items;
+
+        await itemUploader.preUploadItems(locals);
+
+        for (let i = 0; i < locals.length; i++) {
+          if (this.cancelling()) break;
+
+          let local = locals[i];
+          const ItemClass: typeof BaseItem = BaseItem.itemClass(local);
+          const path = BaseItem.systemPath(local);
+
+          // Safety check to avoid infinite loops.
+          // - In fact this error is possible if the item is marked for sync (via sync_time or force_sync) while synchronisation is in
+          //   progress. In that case exit anyway to be sure we aren't in a loop and the item will be re-synced next time.
+          // - It can also happen if the item is directly modified in the sync target, and set with an update_time in the future. In that case,
+          //   the local sync_time will be updated to Date.now() but on the next loop it will see that the remote item still has a date ahead
+          //   and will see a conflict. There's currently no automatic fix for this - the remote item on the sync target must be fixed manually
+          //   (by setting an updated_time less than current time).
+          if (donePaths.indexOf(path) >= 0)
+            throw new JoplinError(
+              sprintf(
+                "Processing a path that has already been done: %s. sync_time was not updated? Remote item has an updated_time in the future?",
+                path
+              ),
+              "processingPathTwice"
+            );
+
+          const remote: RemoteItem = await this.apiCall("stat", path);
+          let action: SyncAction = null;
+          let itemIsReadOnly = false;
+          let reason = "";
+          let remoteContent = null;
+
+          const getConflictType = (conflictedItem: any) => {
+            if (conflictedItem.type_ === BaseModel.TYPE_NOTE)
+              return SyncAction.NoteConflict;
+            if (conflictedItem.type_ === BaseModel.TYPE_RESOURCE)
+              return SyncAction.ResourceConflict;
+            return SyncAction.ItemConflict;
+          };
+
+          if (remote) {
+            // action = SyncAction.ItemConflict
+            // reason = "remote item exists, can't create. ";
+            throw new Error("Remote item exists, can't create. ");
+          }
+
+          // remove this logic because
+          // upload item mean create it entirely new, not synced before
+          // if (!local.sync_time) {
+          action = SyncAction.CreateRemote;
+          reason =
+            "remote does not exist, and local is new and has never been synced";
+          // } else {
+          // Note or item was modified after having been deleted remotely
+          // "itemConflict" is for all the items except the notes, which are dealt with in a special way
+          // action = getConflictType(local);
+          // reason = "remote has been deleted, but local has changes";
+          // }
+
+          // We no longer upload Master Keys however we keep them
+          // in the database for extra safety. In a future
+          // version, once it's confirmed that the new E2EE system
+          // works well, we can delete them.
+          // if (local.type_ === ModelType.MasterKey) action = null;
+
+          this.logSyncOperation(action, local, remote, reason);
+
+          // TODO: skipped a large chunk of resource handling code here, implement later
+
+          if (action === SyncAction.CreateRemote) {
+            let canSync = true;
+            try {
+              // if (
+              //   this.testingHooks_.indexOf("notesRejectedByTarget") >= 0 &&
+              //   local.type_ === BaseModel.TYPE_NOTE
+              // )
+              //   throw new JoplinError(
+              //     "Testing rejectedByTarget",
+              //     "rejectedByTarget"
+              //   );
+              // if (this.testingHooks_.indexOf("itemIsReadOnly") >= 0)
+              //   throw new JoplinError(
+              //     "Testing isReadOnly",
+              //     ErrorCode.IsReadOnly
+              //   );
+
+              // stuck field names
+              await itemUploader.serializeAndUploadItem(ItemClass, path, local);
+            } catch (error) {
+              if (error && error.code === "rejectedByTarget") {
+                // TODO: callback cannot upload item
+                // await handleCannotSyncItem(
+                //   ItemClass,
+                //   syncTargetId,
+                //   local,
+                //   error.message
+                // );
+                canSync = false;
+              } else if (error && error.code === ErrorCode.IsReadOnly) {
+                action = getConflictType(local);
+                itemIsReadOnly = true;
+                canSync = false;
+              } else {
+                throw error;
+              }
+            }
+
+            // Note: Currently, we set sync_time to update_time, which should work fine given that the resolution is the millisecond.
+            // In theory though, this could happen:
+            //
+            // 1. t0: Editor: Note is modified
+            // 2. t0: Sync: Found that note was modified so start uploading it
+            // 3. t0: Editor: Note is modified again
+            // 4. t1: Sync: Note has finished uploading, set sync_time to t0
+            //
+            // Later any attempt to sync will not detect that note was modified in (3) (within the same millisecond as it was being uploaded)
+            // because sync_time will be t0 too.
+            //
+            // The solution would be to use something like an etag (a simple counter incremented on every change) to make sure each
+            // change is uniquely identified. Leaving it like this for now.
+
+            // TODO: this is done by user
+            // if (canSync) {
+            //   // 2018-01-21: Setting timestamp is not needed because the delta() logic doesn't rely
+            //   // on it (instead it uses a more reliable `context` object) and the itemsThatNeedSync loop
+            //   // above also doesn't use it because it fetches the whole remote object and read the
+            //   // more reliable 'updated_time' property. Basically remote.updated_time is deprecated.
+
+            //   await ItemClass.saveSyncTime(
+            //     syncTargetId,
+            //     local,
+            //     local.updated_time
+            //   );
+            // }
+          }
+
+          // TODO: callback for conflict handling
+          // await handleConflictAction(
+          //   action,
+          //   ItemClass,
+          //   !!remote,
+          //   remoteContent,
+          //   local,
+          //   syncTargetId,
+          //   itemIsReadOnly,
+          //   (action: any) => this.dispatch(action)
+          // );
+
+          completeItemProcessing(path);
+        }
+
+        // TODO: after batched, check and break
+        break;
+        // if (!result.hasMore) break;
+      }
+    } catch (err) {
+      throw err;
+    }
+  }
 
   // Synchronisation is done in three major steps:
   //
@@ -390,10 +814,7 @@ export default class Synchronizer {
 
     if (this.state() !== "idle") {
       const error: any = new Error(
-        sprintf(
-          "Synchronisation is already in progress. State: %s",
-          this.state()
-        )
+        "Synchronisation is already in progress. State: %s" + this.state()
       );
       error.code = "alreadyStarted";
       throw error;

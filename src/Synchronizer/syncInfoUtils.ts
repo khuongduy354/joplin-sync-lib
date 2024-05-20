@@ -6,7 +6,6 @@ import Setting from "@joplin/lib/models/Setting";
 // import { PublicPrivateKeyPair } from "../e2ee/ppk";
 // import { MasterKeyEntity } from "../e2ee/types";
 import { compareVersions } from "compare-versions";
-import { _ } from "../../locale";
 import JoplinError from "@joplin/lib/JoplinError";
 import { ErrorCode } from "@joplin/lib/errors";
 const fastDeepEqual = require("fast-deep-equal");
@@ -505,10 +504,7 @@ export function masterKeyById(id: string) {
 export const checkIfCanSync = (s: SyncInfo, appVersion: string) => {
   if (compareVersions(appVersion, s.appMinVersion) < 0)
     throw new JoplinError(
-      _(
-        "In order to synchronise, please upgrade your application to version %s+",
-        s.appMinVersion
-      ),
+      "In order to synchronise, please upgrade your application to version %s+",
       ErrorCode.MustUpgradeApp
     );
 };
