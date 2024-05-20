@@ -46,8 +46,8 @@ export class FileApiDriverOneDrive {
       output.updated_time = Number(
         moment(
           odItem.fileSystemInfo.lastModifiedDateTime,
-          "YYYY-MM-DDTHH:mm:ss.SSSZ",
-        ).format("x"),
+          "YYYY-MM-DDTHH:mm:ss.SSSZ"
+        ).format("x")
       );
     }
 
@@ -60,7 +60,7 @@ export class FileApiDriverOneDrive {
       item = await this.api_.execJson(
         "GET",
         this.makePath_(path),
-        this.itemFilter_(),
+        this.itemFilter_()
       );
     } catch (error) {
       if (error.code === "itemNotFound") return null;
@@ -88,7 +88,7 @@ export class FileApiDriverOneDrive {
       "PATCH",
       this.makePath_(path),
       null,
-      body,
+      body
     );
     return this.makeItem_(item);
   }
@@ -125,13 +125,13 @@ export class FileApiDriverOneDrive {
           `${this.makePath_(path)}:/content`,
           null,
           null,
-          options,
+          options
         );
         return response;
       } else {
         const content = await this.api_.execText(
           "GET",
-          `${this.makePath_(path)}:/content`,
+          `${this.makePath_(path)}:/content`
         );
         return content;
       }
@@ -153,7 +153,7 @@ export class FileApiDriverOneDrive {
       {
         name: basename(path),
         folder: {},
-      },
+      }
     );
 
     return this.makeItem_(item);
@@ -215,7 +215,7 @@ export class FileApiDriverOneDrive {
   }
 
   format() {
-    throw new Error("Not implemented");
+    throw new Error("Not implemented: format");
   }
 
   async pathDetails_(path) {
