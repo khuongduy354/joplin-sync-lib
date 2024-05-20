@@ -31,6 +31,8 @@ async function main() {
 
     // 3. update item without conflict
 
+    // test cases on Lock: run 2 push at same time
+
     const itemClass = BaseItem.itemClass(1);
     const item = new itemClass();
     item.type_ = 1;

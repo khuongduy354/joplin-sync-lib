@@ -2,7 +2,7 @@ import { logger, LoggerWrapper } from "../helpers/logger";
 import { singleton } from "../singleton";
 import helper from "../helpers/index";
 import { isHidden } from "@joplin/utils/path";
-import { LockClientType, LockType } from "../Synchronizer/Locks/Locks";
+import { Lock, LockClientType, LockType } from "../Synchronizer/Locks";
 const Mutex = require("async-mutex").Mutex;
 
 export interface MultiPutItem {

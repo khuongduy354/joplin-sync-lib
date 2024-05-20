@@ -9,10 +9,11 @@ import {
 } from "@joplin/lib/services/synchronizer/utils/types";
 import { fetchSyncInfo } from "./syncInfoUtils";
 import time from "@joplin/lib/time";
-import { LockClientType, LockType } from "./Locks/Locks";
 import LockHandler, {
+  LockClientType,
+  LockType,
   appTypeToLockType,
-} from "@joplin/lib/services/synchronizer/LockHandler";
+} from "./Locks";
 import MigrationHandler from "@joplin/lib/services/synchronizer/MigrationHandler";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import { RemoteItem } from "@joplin/lib/file-api";
@@ -609,20 +610,20 @@ export default class Synchronizer {
       }
 
       // TODO: fix lock later (easy): because lock dependent on shim, just move lock here
-      // syncLock = await this.lockHandler().acquireLock(
-      //   LockType.Sync,
-      //   this.lockClientType(),
-      //   this.clientId_
-      // );
+      syncLock = await this.lockHandler().acquireLock(
+        LockType.Sync,
+        this.lockClientType(),
+        this.clientId_
+      );
 
-      // this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
-      //   logger.warn(
-      //     "Could not refresh lock - cancelling sync. Error was:",
-      //     error
-      //   );
-      //   this.syncTargetIsLocked_ = true;
-      //   void this.cancel();
-      // });
+      this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
+        logger.warn(
+          "Could not refresh lock - cancelling sync. Error was:",
+          error
+        );
+        this.syncTargetIsLocked_ = true;
+        void this.cancel();
+      });
 
       // ========================================================================
       // UPLOAD
