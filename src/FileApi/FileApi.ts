@@ -265,10 +265,10 @@ class FileApi {
     return this.syncTargetId_;
   }
 
-  // public setLogger(l: any) {
-  // 	if (!l) l = new Logger();
-  // 	this.logger_ = l;
-  // }
+  public setLogger(l: any) {
+    if (!l) l = console;
+    this.logger_ = l;
+  }
 
   public logger() {
     return this.logger_;
