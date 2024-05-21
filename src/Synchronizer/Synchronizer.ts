@@ -21,6 +21,11 @@ import JoplinError from "@joplin/lib/JoplinError";
 import BaseModel from "@joplin/lib/BaseModel";
 import { ErrorCode } from "@joplin/lib/errors";
 import { parameters_ } from "../helpers/parameter";
+import { createUUID } from "../helpers/item";
+
+type UploadResponse = {
+  createdIds: string[];
+};
 
 export default class Synchronizer {
   public static verboseMode = true;
@@ -402,6 +407,11 @@ export default class Synchronizer {
   }
   public async uploadItem(options: any = null) {
     // PREPARATION
+    let res: UploadResponse = {
+      isOk: false,
+      createdIds: [],
+    };
+
     if (!options) options = {};
 
     if (this.state() !== "idle") {
@@ -632,8 +642,10 @@ export default class Synchronizer {
       // ========================================================================
 
       const donePaths: string[] = [];
+      const idLists: string[] = [];
 
-      const completeItemProcessing = (path: string) => {
+      const completeItemProcessing = (path: string, id: string) => {
+        idLists.push(id);
         donePaths.push(path);
       };
 
@@ -643,7 +655,8 @@ export default class Synchronizer {
 
         // TODO: batch here to 10
         const locals = options.items as BaseItem[];
-        // const locals = result.items;
+        // id generation
+        locals.forEach((item) => (item.id = createUUID()));
 
         await itemUploader.preUploadItems(locals);
 
@@ -792,7 +805,7 @@ export default class Synchronizer {
           //   (action: any) => this.dispatch(action)
           // );
 
-          completeItemProcessing(path);
+          completeItemProcessing(path, local.id as string);
         }
 
         // TODO: after batched, check and break
@@ -809,6 +822,7 @@ export default class Synchronizer {
         );
       }
       this.syncTargetIsLocked_ = false;
+      return { createdIds: idLists };
     } catch (err) {
       throw err;
     }
