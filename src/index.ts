@@ -52,7 +52,8 @@ async function main() {
   const localDBPath = "src/sample_app/Storage/local.sqlite";
   const syncPath = "src/sample_app/Storage/fsSyncTarget";
   try {
-    const db = await initDb(localDBPath);
+    // const db = await initDb(localDBPath);
+    const db: any = null;
     const syncTarget = new FileSystemSyncTarget(db);
     await syncTarget.initFileApi(syncPath);
     syncTarget.initSynchronizer();
@@ -70,7 +71,7 @@ async function main() {
     // 2. READ items since last sync
 
     // test cases on Lock: run 2 push at same time
-    const item = testNoteItem();
+    const item = noteBuilder();
     const res = await (
       await syncTarget.synchronizer()
     ).uploadItem({
@@ -83,5 +84,70 @@ async function main() {
   }
 }
 
-console.log("Starting app...");
-main();
+function noteBuilder(title = "", body = "") {
+  const sample = {
+    id: "",
+    parent_id: "1b0663e319074c0cbd966678dabde0b8",
+    title,
+    body,
+    // TODO: create in upload process
+    // created_time: "2024-05-20T10:59:36.204Z",
+    // updated_time: "2024-05-20T10:59:37.322Z",
+    // user_created_time: "2024-05-20T10:59:36.204Z",
+    // user_updated_time: "2024-05-20T10:59:37.322Z",
+    is_conflict: 0,
+    latitude: 10.7578263,
+    longitude: 106.7012968,
+    altitude: 0.0,
+    author: "",
+    source_url: "",
+    is_todo: 1,
+    todo_due: 0,
+    todo_completed: 0,
+    // TODO: change to library
+    source: "joplin-desktop",
+    source_application: "net.cozic.joplin-desktop",
+    application_data: "",
+    order: 0,
+    encryption_cipher_text: "",
+    encryption_applied: 0,
+    markup_language: 1,
+    is_shared: 0,
+    share_id: "",
+    conflict_original_id: "",
+    master_key_id: "",
+    user_data: "",
+    deleted_time: 0,
+    type_: 1,
+  };
+  return sample;
+}
+
+async function mailClient() {
+  try {
+    // Upload an email to Joplin SyncTarget
+
+    // 1. Create payload
+    const mailTitle = "This is an email";
+    const mailBody = "This is the body of the email, blahblahblah";
+    const note = noteBuilder(mailTitle, mailBody); // note is a plain Javascript object { id, title, body, ...}
+
+    // 2. Initialize Synchronizer
+
+    const syncPath = "src/sample_app/Storage/fsSyncTarget"; // filesystem sync target
+
+    const db: any = null; // upload dont need local database
+    const syncTarget = new FileSystemSyncTarget(db);
+    await syncTarget.initFileApi(syncPath);
+    await syncTarget.initSynchronizer();
+
+    // 3. Upload email
+    const syncer = await syncTarget.synchronizer();
+    const res = await syncer.uploadItem({ items: [note] });
+    console.log(res.createdIds); // return id of the newly created note
+  } catch (err) {
+    console.error(err);
+  }
+}
+mailClient();
+// main();

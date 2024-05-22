@@ -662,7 +662,7 @@ export default class Synchronizer {
 
           let local = locals[i];
           const ItemClass: typeof BaseItem = BaseItem.itemClass(local);
-          const path = BaseItem.systemPath(local);
+          const path = BaseItem.systemPath(local.id);
 
           // Safety check to avoid infinite loops.
           // - In fact this error is possible if the item is marked for sync (via sync_time or force_sync) while synchronisation is in
