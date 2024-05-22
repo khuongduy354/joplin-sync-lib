@@ -280,12 +280,14 @@ export default class Synchronizer {
       if (n === "completedTime") continue;
       logger.info(`${n}: ${report[n] ? report[n] : "-"}`);
     }
-    const folderCount = await Folder.count();
-    const noteCount = await Note.count();
-    const resourceCount = await Resource.count();
-    logger.info(`Total folders: ${folderCount}`);
-    logger.info(`Total notes: ${noteCount}`);
-    logger.info(`Total resources: ${resourceCount}`);
+
+    // Remove Local Files report
+    // const folderCount = await Folder.count();
+    // const noteCount = await Note.count();
+    // const resourceCount = await Resource.count();
+    // logger.info(`Total folders: ${folderCount}`);
+    // logger.info(`Total notes: ${noteCount}`);
+    // logger.info(`Total resources: ${resourceCount}`);
 
     if (Synchronizer.reportHasErrors(report)) {
       logger.warn("There was some errors:");
@@ -407,11 +409,6 @@ export default class Synchronizer {
   }
   public async uploadItem(options: any = null) {
     // PREPARATION
-    let res: UploadResponse = {
-      isOk: false,
-      createdIds: [],
-    };
-
     if (!options) options = {};
 
     if (this.state() !== "idle") {
@@ -822,6 +819,42 @@ export default class Synchronizer {
         );
       }
       this.syncTargetIsLocked_ = false;
+
+      // After syncing, we run the share service maintenance, which is going
+      // to fetch share invitations, if any.
+      // TODO: share service
+      // if (this.shareService_) {
+      // 	try {
+      // 		await this.shareService_.maintenance();
+      // 	} catch (error) {
+      // 		logger.error('Could not run share service maintenance:', error);
+      // 	}
+      // }
+
+      this.progressReport_.completedTime = time.unixMs();
+
+      this.logSyncOperation(
+        "finished",
+        null,
+        null,
+        `Synchronisation finished [${synchronizationId}]`
+      );
+
+      console.log("progressReport_: ", this.progressReport_);
+      await this.logSyncSummary(this.progressReport_);
+
+      this.onProgress_ = function () {};
+      this.progressReport_ = {};
+
+      // this.dispatch({
+      //   type: "SYNC_COMPLETED",
+      //   isFullSync: this.isFullSync(syncSteps),
+      // });
+
+      this.state_ = "idle";
+
+      if (errorToThrow) throw errorToThrow;
+
       return { createdIds: idLists };
     } catch (err) {
       throw err;
@@ -1823,21 +1856,21 @@ export default class Synchronizer {
 
     await this.logSyncSummary(this.progressReport_);
 
-    eventManager.emit(EventName.SyncComplete, {
-      withErrors: Synchronizer.reportHasErrors(this.progressReport_),
-    });
+    // eventManager.emit(EventName.SyncComplete, {
+    //   withErrors: Synchronizer.reportHasErrors(this.progressReport_),
+    // });
 
-    await checkDisabledSyncItemsNotification((action: any) =>
-      this.dispatch(action)
-    );
+    // await checkDisabledSyncItemsNotification((action: any) =>
+    //   this.dispatch(action)
+    // );
 
     this.onProgress_ = function () {};
     this.progressReport_ = {};
 
-    this.dispatch({
-      type: "SYNC_COMPLETED",
-      isFullSync: this.isFullSync(syncSteps),
-    });
+    // this.dispatch({
+    //   type: "SYNC_COMPLETED",
+    //   isFullSync: this.isFullSync(syncSteps),
+    // });
 
     this.state_ = "idle";
 
