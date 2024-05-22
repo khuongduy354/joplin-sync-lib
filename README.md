@@ -1,4 +1,6 @@
-# Joplin Sync Library   
+# Joplin Sync Library    
+
+Joplin Synchronization API
  
 
 # Usage
