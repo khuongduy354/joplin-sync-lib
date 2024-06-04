@@ -3,7 +3,6 @@ import { initDb } from "./Database/Database";
 import { FileSystemSyncTarget } from "./SyncTarget/FileSystemSyncTarget";
 import Note from "@joplin/lib/models/Note";
 import { serializeModel } from "./helpers/item";
-import { testNoteItem } from "./helpers/item";
 
 // TODO: quick hack
 Note.fieldNames = (withPrefix: boolean = false) => {
@@ -139,10 +138,9 @@ async function mailClient() {
     const db: any = null; // upload dont need local database
     const syncTarget = new FileSystemSyncTarget(db);
     await syncTarget.initFileApi(syncPath);
-    await syncTarget.initSynchronizer();
+    const syncer = await syncTarget.synchronizer();
 
     // 3. Upload email
-    const syncer = await syncTarget.synchronizer();
     const res = await syncer.uploadItem({ items: [note] });
     console.log(res.createdIds); // return id of the newly created note
   } catch (err) {

@@ -5,6 +5,7 @@ const parameters_ = {
     id: "f1e68e1e-a729-4514-b041-4fdd5c7ac03a",
     secret: "~PC7cwAC_AXGICk_V0~12SmI9lbaC-MBDT",
   },
+  syncVersion: 3,
   dev: {},
   prod: {},
 };
