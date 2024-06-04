@@ -14,7 +14,7 @@ import LockHandler, {
   LockType,
   appTypeToLockType,
 } from "./Locks";
-import MigrationHandler from "@joplin/lib/services/synchronizer/MigrationHandler";
+import MigrationHandler from "./MigrationHandler";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import { RemoteItem } from "@joplin/lib/file-api";
 import JoplinError from "@joplin/lib/JoplinError";
@@ -88,7 +88,7 @@ export default class Synchronizer {
     return this.clientId_;
   }
 
-  public setLogger(l: Logger) {
+  public setLogger(l: any) {
     const previous = this.logger_;
     this.logger_ = l;
     return previous;
@@ -104,7 +104,7 @@ export default class Synchronizer {
     return this.lockHandler_;
   }
 
-  private lockClientType(): LockClientType {
+  public lockClientType(): LockClientType {
     if (this.lockClientType_) return this.lockClientType_;
     this.lockClientType_ = appTypeToLockType(this.appType_);
     return this.lockClientType_;
@@ -646,169 +646,177 @@ export default class Synchronizer {
         donePaths.push(path);
       };
 
-      while (true) {
-        // TODO: handle cancelling here
-        if (this.cancelling()) break;
+      // TODO: handle cancelling here
 
-        // TODO: batch here to 10
-        const locals = options.items as BaseItem[];
-        // id generation
-        locals.forEach((item) => (item.id = createUUID()));
+      // TODO: batch here to 10
+      const locals = options.items as BaseItem[];
+      // id generation
+      locals.forEach((item) => (item.id = createUUID()));
 
-        await itemUploader.preUploadItems(locals);
+      console.log(
+        "Getting path tree before preupload: ",
+        await this.api().list()
+      );
 
-        for (let i = 0; i < locals.length; i++) {
-          if (this.cancelling()) break;
+      await itemUploader.preUploadItems(locals);
 
-          let local = locals[i];
-          const ItemClass: typeof BaseItem = BaseItem.itemClass(local);
-          const path = BaseItem.systemPath(local.id);
+      console.log(
+        "Getting path tree after preupload: ",
+        await this.api().list()
+      );
 
-          // Safety check to avoid infinite loops.
-          // - In fact this error is possible if the item is marked for sync (via sync_time or force_sync) while synchronisation is in
-          //   progress. In that case exit anyway to be sure we aren't in a loop and the item will be re-synced next time.
-          // - It can also happen if the item is directly modified in the sync target, and set with an update_time in the future. In that case,
-          //   the local sync_time will be updated to Date.now() but on the next loop it will see that the remote item still has a date ahead
-          //   and will see a conflict. There's currently no automatic fix for this - the remote item on the sync target must be fixed manually
-          //   (by setting an updated_time less than current time).
-          if (donePaths.indexOf(path) >= 0)
-            throw new JoplinError(
-              sprintf(
-                "Processing a path that has already been done: %s. sync_time was not updated? Remote item has an updated_time in the future?",
-                path
-              ),
-              "processingPathTwice"
-            );
+      for (let i = 0; i < locals.length; i++) {
+        let local = locals[i];
+        const ItemClass: typeof BaseItem = BaseItem.itemClass(local);
+        const path = BaseItem.systemPath(local.id);
 
-          const remote: RemoteItem = await this.apiCall("stat", path);
-          let action: SyncAction = null;
-          let itemIsReadOnly = false;
-          let reason = "";
-          let remoteContent = null;
+        // Safety check to avoid infinite loops.
+        // - In fact this error is possible if the item is marked for sync (via sync_time or force_sync) while synchronisation is in
+        //   progress. In that case exit anyway to be sure we aren't in a loop and the item will be re-synced next time.
+        // - It can also happen if the item is directly modified in the sync target, and set with an update_time in the future. In that case,
+        //   the local sync_time will be updated to Date.now() but on the next loop it will see that the remote item still has a date ahead
+        //   and will see a conflict. There's currently no automatic fix for this - the remote item on the sync target must be fixed manually
+        //   (by setting an updated_time less than current time).
+        if (donePaths.indexOf(path) >= 0)
+          throw new JoplinError(
+            sprintf(
+              "Processing a path that has already been done: %s. sync_time was not updated? Remote item has an updated_time in the future?",
+              path
+            ),
+            "processingPathTwice"
+          );
 
-          const getConflictType = (conflictedItem: any) => {
-            if (conflictedItem.type_ === BaseModel.TYPE_NOTE)
-              return SyncAction.NoteConflict;
-            if (conflictedItem.type_ === BaseModel.TYPE_RESOURCE)
-              return SyncAction.ResourceConflict;
-            return SyncAction.ItemConflict;
-          };
+        const itemList = await this.apiCall("list", path);
 
-          if (remote) {
-            // action = SyncAction.ItemConflict
-            // reason = "remote item exists, can't create. ";
-            throw new Error("Remote item exists, can't create. ");
-          }
+        const remote: RemoteItem = await this.apiCall("stat", path);
+        console.log("Getting path metadata: ", path);
+        let action: SyncAction = null;
+        let itemIsReadOnly = false;
+        let reason = "";
+        let remoteContent = null;
 
-          // remove this logic because
-          // upload item mean create it entirely new, not synced before
-          // if (!local.sync_time) {
-          action = SyncAction.CreateRemote;
-          reason =
-            "remote does not exist, and local is new and has never been synced";
-          // } else {
-          // Note or item was modified after having been deleted remotely
-          // "itemConflict" is for all the items except the notes, which are dealt with in a special way
-          // action = getConflictType(local);
-          // reason = "remote has been deleted, but local has changes";
-          // }
+        const getConflictType = (conflictedItem: any) => {
+          if (conflictedItem.type_ === BaseModel.TYPE_NOTE)
+            return SyncAction.NoteConflict;
+          if (conflictedItem.type_ === BaseModel.TYPE_RESOURCE)
+            return SyncAction.ResourceConflict;
+          return SyncAction.ItemConflict;
+        };
 
-          // We no longer upload Master Keys however we keep them
-          // in the database for extra safety. In a future
-          // version, once it's confirmed that the new E2EE system
-          // works well, we can delete them.
-          // if (local.type_ === ModelType.MasterKey) action = null;
-
-          this.logSyncOperation(action, local, remote, reason);
-
-          // TODO: skipped a large chunk of resource handling code here, implement later
-
-          if (action === SyncAction.CreateRemote) {
-            let canSync = true;
-            try {
-              // if (
-              //   this.testingHooks_.indexOf("notesRejectedByTarget") >= 0 &&
-              //   local.type_ === BaseModel.TYPE_NOTE
-              // )
-              //   throw new JoplinError(
-              //     "Testing rejectedByTarget",
-              //     "rejectedByTarget"
-              //   );
-              // if (this.testingHooks_.indexOf("itemIsReadOnly") >= 0)
-              //   throw new JoplinError(
-              //     "Testing isReadOnly",
-              //     ErrorCode.IsReadOnly
-              //   );
-
-              // stuck field names
-              await itemUploader.serializeAndUploadItem(ItemClass, path, local);
-            } catch (error) {
-              if (error && error.code === "rejectedByTarget") {
-                // TODO: callback cannot upload item
-                // await handleCannotSyncItem(
-                //   ItemClass,
-                //   syncTargetId,
-                //   local,
-                //   error.message
-                // );
-                canSync = false;
-              } else if (error && error.code === ErrorCode.IsReadOnly) {
-                action = getConflictType(local);
-                itemIsReadOnly = true;
-                canSync = false;
-              } else {
-                throw error;
-              }
-            }
-
-            // Note: Currently, we set sync_time to update_time, which should work fine given that the resolution is the millisecond.
-            // In theory though, this could happen:
-            //
-            // 1. t0: Editor: Note is modified
-            // 2. t0: Sync: Found that note was modified so start uploading it
-            // 3. t0: Editor: Note is modified again
-            // 4. t1: Sync: Note has finished uploading, set sync_time to t0
-            //
-            // Later any attempt to sync will not detect that note was modified in (3) (within the same millisecond as it was being uploaded)
-            // because sync_time will be t0 too.
-            //
-            // The solution would be to use something like an etag (a simple counter incremented on every change) to make sure each
-            // change is uniquely identified. Leaving it like this for now.
-
-            // TODO: this is done by user
-            // if (canSync) {
-            //   // 2018-01-21: Setting timestamp is not needed because the delta() logic doesn't rely
-            //   // on it (instead it uses a more reliable `context` object) and the itemsThatNeedSync loop
-            //   // above also doesn't use it because it fetches the whole remote object and read the
-            //   // more reliable 'updated_time' property. Basically remote.updated_time is deprecated.
-
-            //   await ItemClass.saveSyncTime(
-            //     syncTargetId,
-            //     local,
-            //     local.updated_time
-            //   );
-            // }
-          }
-
-          // TODO: callback for conflict handling
-          // await handleConflictAction(
-          //   action,
-          //   ItemClass,
-          //   !!remote,
-          //   remoteContent,
-          //   local,
-          //   syncTargetId,
-          //   itemIsReadOnly,
-          //   (action: any) => this.dispatch(action)
-          // );
-
-          completeItemProcessing(path, local.id as string);
+        if (remote) {
+          // action = SyncAction.ItemConflict
+          // reason = "remote item exists, can't create. ";
+          console.log("REMOTE EXIST: ", remote);
+          throw new Error("Remote item exists, can't create. ");
         }
 
-        // TODO: after batched, check and break
-        break;
-        // if (!result.hasMore) break;
+        // remove this logic because
+        // upload item mean create it entirely new, not synced before
+        // if (!local.sync_time) {
+        action = SyncAction.CreateRemote;
+        reason = "Uploading items to remote";
+        // } else {
+        // Note or item was modified after having been deleted remotely
+        // "itemConflict" is for all the items except the notes, which are dealt with in a special way
+        // action = getConflictType(local);
+        // reason = "remote has been deleted, but local has changes";
+        // }
+
+        // We no longer upload Master Keys however we keep them
+        // in the database for extra safety. In a future
+        // version, once it's confirmed that the new E2EE system
+        // works well, we can delete them.
+        // if (local.type_ === ModelType.MasterKey) action = null;
+
+        this.logSyncOperation(action, local, remote, reason);
+
+        // TODO: skipped a large chunk of resource handling code here, implement later
+
+        if (action === SyncAction.CreateRemote) {
+          let canSync = true;
+          try {
+            // if (
+            //   this.testingHooks_.indexOf("notesRejectedByTarget") >= 0 &&
+            //   local.type_ === BaseModel.TYPE_NOTE
+            // )
+            //   throw new JoplinError(
+            //     "Testing rejectedByTarget",
+            //     "rejectedByTarget"
+            //   );
+            // if (this.testingHooks_.indexOf("itemIsReadOnly") >= 0)
+            //   throw new JoplinError(
+            //     "Testing isReadOnly",
+            //     ErrorCode.IsReadOnly
+            //   );
+
+            // stuck field names
+            await itemUploader.serializeAndUploadItem(ItemClass, path, local);
+          } catch (error) {
+            if (error && error.code === "rejectedByTarget") {
+              // TODO: callback cannot upload item
+              // await handleCannotSyncItem(
+              //   ItemClass,
+              //   syncTargetId,
+              //   local,
+              //   error.message
+              // );
+              canSync = false;
+            } else if (error && error.code === ErrorCode.IsReadOnly) {
+              action = getConflictType(local);
+              itemIsReadOnly = true;
+              canSync = false;
+            } else {
+              throw error;
+            }
+          }
+
+          // Note: Currently, we set sync_time to update_time, which should work fine given that the resolution is the millisecond.
+          // In theory though, this could happen:
+          //
+          // 1. t0: Editor: Note is modified
+          // 2. t0: Sync: Found that note was modified so start uploading it
+          // 3. t0: Editor: Note is modified again
+          // 4. t1: Sync: Note has finished uploading, set sync_time to t0
+          //
+          // Later any attempt to sync will not detect that note was modified in (3) (within the same millisecond as it was being uploaded)
+          // because sync_time will be t0 too.
+          //
+          // The solution would be to use something like an etag (a simple counter incremented on every change) to make sure each
+          // change is uniquely identified. Leaving it like this for now.
+
+          // TODO: this is done by user
+          // if (canSync) {
+          //   // 2018-01-21: Setting timestamp is not needed because the delta() logic doesn't rely
+          //   // on it (instead it uses a more reliable `context` object) and the itemsThatNeedSync loop
+          //   // above also doesn't use it because it fetches the whole remote object and read the
+          //   // more reliable 'updated_time' property. Basically remote.updated_time is deprecated.
+
+          //   await ItemClass.saveSyncTime(
+          //     syncTargetId,
+          //     local,
+          //     local.updated_time
+          //   );
+          // }
+        }
+
+        // TODO: callback for conflict handling
+        // await handleConflictAction(
+        //   action,
+        //   ItemClass,
+        //   !!remote,
+        //   remoteContent,
+        //   local,
+        //   syncTargetId,
+        //   itemIsReadOnly,
+        //   (action: any) => this.dispatch(action)
+        // );
+
+        completeItemProcessing(path, local.id as string);
       }
+
+      // TODO: after batched, check and break
+
+      // if (!result.hasMore) break;
 
       if (syncLock) {
         this.lockHandler().stopAutoLockRefresh(syncLock);

@@ -23,7 +23,8 @@ export default class FileApiDriverMemory {
   }
 
   public get supportsMultiPut() {
-    return true;
+    // TODO: currently disable multiput for testing purpose
+    return false;
   }
 
   public get supportsAccurateTimestamp() {
@@ -71,7 +72,15 @@ export default class FileApiDriverMemory {
     item.updated_time = timestampMs;
   }
 
-  public async list(path: string) {
+  public async list(path: string = null) {
+    if (!path) {
+      return Promise.resolve({
+        items: this.items_,
+        hasMore: false,
+        context: null,
+      });
+    }
+
     const output = [];
 
     for (let i = 0; i < this.items_.length; i++) {

@@ -26,6 +26,7 @@ export class MemorySyncTarget extends BaseSyncTarget {
     const fileApi = new FileApi("/root", new FileApiDriverMemory());
     fileApi.setLogger(console);
     fileApi.setSyncTargetId(MemorySyncTarget.id());
+    this.fileApi_ = fileApi;
     return fileApi;
   }
 

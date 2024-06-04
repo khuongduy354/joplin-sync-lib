@@ -1,4 +1,5 @@
 import BaseItem from "@joplin/lib/models/BaseItem";
+import Note from "@joplin/lib/models/Note";
 import moment from "moment";
 import { v4 } from "uuid";
 
@@ -6,8 +7,9 @@ export function createUUID() {
   return v4().replace(/-/g, "");
 }
 export const testNoteItem = () => {
-  const itemClass = BaseItem.itemClass(1);
-  let item = new itemClass();
+  // const itemClass = BaseItem.itemClass(1);
+
+  // let item = new Note();
 
   const sample = {
     // TODO: id gen here
@@ -46,8 +48,8 @@ export const testNoteItem = () => {
     type_: 1,
   };
 
-  item = { ...item, ...sample };
-  return item;
+  // item = { ...item, ...sample };
+  return sample;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
