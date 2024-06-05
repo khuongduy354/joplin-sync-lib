@@ -103,7 +103,7 @@ describe("Synchronizer.basics", () => {
       "Getting path tree before calling upload: ",
       await syncer.api().list()
     );
-    const res = await syncer.uploadItem({ items: [note] });
+    const res = await syncer.createItems({ items: [note] });
     const path = BaseItem.systemPath(res.createdIds[0]);
 
     // await synchronizerStart();

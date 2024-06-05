@@ -407,7 +407,7 @@ export default class Synchronizer {
       }
     }
   }
-  public async uploadItem(options: any = null) {
+  public async createItems(options: any = null) {
     // PREPARATION
     if (!options) options = {};
 

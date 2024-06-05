@@ -73,7 +73,7 @@ async function main() {
     const item = noteBuilder();
     const res = await (
       await syncTarget.synchronizer()
-    ).uploadItem({
+    ).createItems({
       items: [item],
     });
     console.log(res);
@@ -141,7 +141,7 @@ async function mailClient() {
     const syncer = await syncTarget.synchronizer();
 
     // 3. Upload email
-    const res = await syncer.uploadItem({ items: [note] });
+    const res = await syncer.createItems({ items: [note] });
     console.log(res.createdIds); // return id of the newly created note
   } catch (err) {
     console.error(err);
