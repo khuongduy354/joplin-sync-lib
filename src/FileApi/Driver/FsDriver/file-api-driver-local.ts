@@ -4,6 +4,7 @@ import {
   DeltaOptions,
   GetOptions,
   ItemStat,
+  PaginatedList,
   PutOptions,
   basicDelta,
 } from "../../FileApi";
@@ -78,7 +79,10 @@ export default class FileApiDriverLocal {
     }
   }
 
-  public async delta(path: string, options: DeltaOptions) {
+  public async delta(
+    path: string,
+    options: DeltaOptions
+  ): Promise<PaginatedList> {
     const getStatFn = async (path: string) => {
       const stats = await this.fsDriver().readDirStats(path);
       return this.metadataFromStats_(stats);
@@ -92,7 +96,7 @@ export default class FileApiDriverLocal {
     }
   }
 
-  public async list(path: string) {
+  public async list(path: string, options: any = {}) {
     try {
       const stats = await this.fsDriver().readDirStats(path);
       const output = this.metadataFromStats_(stats);

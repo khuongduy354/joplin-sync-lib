@@ -493,9 +493,13 @@ function basicDeltaContextFromOptions_(options: any) {
 // a built-in delta API. OneDrive and Dropbox have one for example, but Nextcloud and obviously
 // the file system do not.
 // eslint-disable-next-line @typescript-eslint/ban-types -- Old code before rule was applied
-async function basicDelta(path: string, getDirStatFn: Function, options: any) {
+async function basicDelta(
+  path: string,
+  getDirStatFn: Function,
+  options: any
+): Promise<PaginatedList> {
   const outputLimit = 50;
-  const itemIds = await options.allItemIdsHandler();
+  const itemIds = await options.allLocalItemsIds;
   if (!Array.isArray(itemIds))
     throw new Error("Delta API not supported - local IDs must be provided");
 
@@ -582,7 +586,9 @@ async function basicDelta(path: string, getDirStatFn: Function, options: any) {
 
   logger.info(`BasicDelta: Report: ${JSON.stringify(updateReport)}`);
 
-  if (!newContext.deletedItemsProcessed) {
+  // TODO: not implementing delete yet
+  // if(!newContext.deletedItemsProcessed){
+  if (false) {
     // Find out which items have been deleted on the sync target by comparing the items
     // we have to the items on the target.
     // Note that when deleted items are processed it might result in the output having

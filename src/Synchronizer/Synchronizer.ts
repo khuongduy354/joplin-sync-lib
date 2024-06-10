@@ -13,10 +13,11 @@ import LockHandler, {
   LockClientType,
   LockType,
   appTypeToLockType,
+  hasActiveLock,
 } from "./Locks";
 import MigrationHandler from "./MigrationHandler";
 import BaseItem from "@joplin/lib/models/BaseItem";
-import { RemoteItem } from "@joplin/lib/file-api";
+import { PaginatedList, RemoteItem } from "@joplin/lib/file-api";
 import JoplinError from "@joplin/lib/JoplinError";
 import BaseModel from "@joplin/lib/BaseModel";
 import { ErrorCode } from "@joplin/lib/errors";
@@ -407,6 +408,46 @@ export default class Synchronizer {
       }
     }
   }
+
+  // options.context.timestamp should be input by user
+  // leave empty == 0, means get all remote items
+  public async getItemsMetadata(options: any = {}) {
+    //TODO: add option: filtering, pagination
+
+    // retrieve remote results after timestamp
+    const deltaResult: PaginatedList = await this.apiCall("delta", "", {
+      context: options.context,
+      allLocalItemsIds: [], // TODO: handle delete operations
+      wipeOutFailSafe: false,
+      logger: console,
+    });
+
+    if (deltaResult.hasMore) {
+      // TODO: handle pagination here
+      // default limit is 50 items
+    }
+
+    return deltaResult.items;
+  }
+
+  // GET single item based on path or id
+  public async getItem(options: { path?: string; id?: string }) {
+    if (options.id) {
+      // id is prioritized
+      return await this.apiCall("get", BaseItem.systemPath(options.id));
+    }
+    if (options.path) {
+      return await this.apiCall("get", options.path);
+    }
+
+    //TODO: unserialize content here
+    // if(options.serialize){
+
+    // }
+
+    return null;
+  }
+
   public async createItems(options: any = null) {
     // PREPARATION
     if (!options) options = {};
@@ -686,10 +727,8 @@ export default class Synchronizer {
             "processingPathTwice"
           );
 
-        const itemList = await this.apiCall("list", path);
-
-        const remote: RemoteItem = await this.apiCall("stat", path);
         console.log("Getting path metadata: ", path);
+        const remote: RemoteItem = await this.apiCall("stat", path);
         let action: SyncAction = null;
         let itemIsReadOnly = false;
         let reason = "";
