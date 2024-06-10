@@ -427,7 +427,7 @@ export default class Synchronizer {
       // default limit is 50 items
     }
 
-    return deltaResult.items;
+    return deltaResult;
   }
 
   // GET single item based on path or id
