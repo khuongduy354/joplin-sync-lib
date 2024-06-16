@@ -1,11 +1,45 @@
 import BaseItem from "@joplin/lib/models/BaseItem";
 import Note from "@joplin/lib/models/Note";
 import moment from "moment";
+import path from "path";
 import { v4 } from "uuid";
 
 export function createUUID() {
   return v4().replace(/-/g, "");
 }
+export const samplePngResource = () => {
+  let localResourceContentPath = "./src/sample_app/Storage/resource/image.png";
+  localResourceContentPath = path.resolve(localResourceContentPath);
+  const sample = {
+    localResourceContentPath, // this is new, absolute path to resource
+    title: "image.png",
+    id: createUUID(),
+    mime: "image/png",
+    filename: "",
+    created_time: "2024-06-14T02:31:45.188Z",
+    updated_time: "2024-06-14T02:31:45.188Z",
+    user_created_time: "2024-06-14T02:31:45.188Z",
+    user_updated_time: "2024-06-14T02:31:45.188Z",
+    file_extension: "png",
+    encryption_cipher_text: "",
+    encryption_applied: 0,
+    encryption_blob_encrypted: 0,
+    size: 331388,
+    is_shared: 0,
+    share_id: "",
+    master_key_id: "",
+    user_data: "",
+    blob_updated_time: 1718332305188,
+    ocr_text: "",
+    ocr_details: "",
+    ocr_status: 0,
+    ocr_error: "",
+    type_: 4,
+  };
+
+  // item = { ...item, ...sample };
+  return sample;
+};
 export const testNoteItem = () => {
   // const itemClass = BaseItem.itemClass(1);
 
