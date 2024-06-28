@@ -4,15 +4,15 @@ import { FileSystemSyncTarget } from "./SyncTarget/FileSystemSyncTarget";
 import Note from "@joplin/lib/models/Note";
 import { samplePngResource, serializeModel } from "./helpers/item";
 import Resource from "@joplin/lib/models/Resource";
+import { serializeForSync, setE2EEnabled } from "./E2E";
 
-// TODO: quick hack
+//  quick hack to override some database depedent methods
 export function loadClasses() {
   Note.fieldNames = (withPrefix: boolean = false) => {
     return [
       "id",
       "title",
       "body",
-      // TODO: fix time here
       "created_time",
       "updated_time",
       "user_updated_time",
@@ -44,21 +44,12 @@ export function loadClasses() {
       "master_key_id",
     ];
   };
-
+  // override some classes
   BaseItem.serialize = serializeModel;
+  BaseItem.serializeForSync = serializeForSync;
 
   BaseItem.loadClass("Note", Note);
   BaseItem.loadClass("Resource", Resource);
-}
-
-async function getItemsMetadata() {
-  const syncPath = "src/sample_app/Storage/fsSyncTarget"; // filesystem sync target
-  const syncTarget = new FileSystemSyncTarget(null);
-  await syncTarget.initFileApi(syncPath);
-  const syncer = await syncTarget.synchronizer();
-
-  const res = await syncer.getItemsMetadata();
-  console.log("Result: ", res);
 }
 
 function noteBuilder(title = "", body = "") {
@@ -81,8 +72,7 @@ function noteBuilder(title = "", body = "") {
     is_todo: 1,
     todo_due: 0,
     todo_completed: 0,
-    // TODO: change to library
-    source: "joplin-desktop",
+    source: "joplin-sync-api",
     source_application: "net.cozic.joplin-desktop",
     application_data: "",
     order: 0,
@@ -100,6 +90,17 @@ function noteBuilder(title = "", body = "") {
   return sample;
 }
 
+// BELOW is driver code for some use cases
+async function getItemsMetadata() {
+  const syncPath = "src/sample_app/Storage/fsSyncTarget"; // filesystem sync target
+  const syncTarget = new FileSystemSyncTarget(null);
+  await syncTarget.initFileApi(syncPath);
+  const syncer = await syncTarget.synchronizer();
+
+  const res = await syncer.getItemsMetadata();
+  console.log("Result: ", res);
+}
+
 export async function mailClient(withAttachment = false) {
   try {
     // Upload an email to Joplin SyncTarget
@@ -113,6 +114,7 @@ export async function mailClient(withAttachment = false) {
       const attachment = samplePngResource();
       items.push(attachment);
     }
+    setE2EEnabled(false); // disable encryption
 
     // 2. Initialize Synchronizer
 
