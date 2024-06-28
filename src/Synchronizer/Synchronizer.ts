@@ -20,11 +20,13 @@ import MigrationHandler from "./MigrationHandler";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import { PaginatedList, RemoteItem } from "@joplin/lib/file-api";
 import JoplinError from "@joplin/lib/JoplinError";
-import BaseModel from "@joplin/lib/BaseModel";
+import BaseModel, { ModelType } from "@joplin/lib/BaseModel";
 import { ErrorCode } from "@joplin/lib/errors";
 import { parameters_ } from "../helpers/parameter";
 import { createUUID } from "../helpers/item";
 import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
+import TaskQueue from "@joplin/lib/TaskQueue";
+import { fullPathForSyncUpload, setE2EEnabled } from "../E2E";
 
 type UploadResponse = {
   createdIds: string[];
@@ -432,6 +434,372 @@ export default class Synchronizer {
     return deltaResult;
   }
 
+  public async getItems(options: any = {}) {
+    // TODO: current assumming only metadata so no need for this
+    // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
+    if (!options.deltaResult) {
+      logger.warn("No delta result to download");
+      return;
+    }
+
+    const listResult = options.deltaResult;
+
+    // TODO: assuming metadata only
+    // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
+
+    // logger.info("supportsDeltaWithItems = ", supportsDeltaWithItems);
+
+    const remotes = listResult.items;
+
+    this.logSyncOperation(
+      "fetchingTotal",
+      null,
+      null,
+      "Fetching delta items from sync target",
+      remotes.length
+    );
+
+    const remoteIds = remotes.map((r: any) => BaseItem.pathToId(r.path));
+
+    // TODO: need a way to provide local files
+    // const locals = await BaseItem.loadItemsByIds(remoteIds);
+
+    for (const remote of remotes) {
+      let needsToDownload = true;
+
+      // File API default to false
+      // if (this.api().supportsAccurateTimestamp) {
+      //   const local = locals.find(
+      //     (l) => l.id === BaseItem.pathToId(remote.path)
+      //   );
+      //   if (local && local.updated_time === remote.jop_updated_time)
+      //     needsToDownload = false;
+      // }
+
+      // if (supportsDeltaWithItems) {
+      //   needsToDownload = false;
+      // }
+
+      if (needsToDownload) {
+        this.downloadQueue_.push(remote.path, async () => {
+          return this.apiCall("get", remote.path);
+        });
+      }
+    }
+
+    let result = [] as any[];
+    // Comparision of locals and remotes to determine sync action (download or not)
+    for (let i = 0; i < remotes.length; i++) {
+      this.logSyncOperation(
+        "fetchingProcessed",
+        null,
+        null,
+        "Processing fetched item"
+      );
+
+      const remote = remotes[i];
+      if (!BaseItem.isSystemPath(remote.path)) continue; // The delta API might return things like the .sync, .resource or the root folder
+
+      if (this.downloadQueue_) this.downloadQueue_.stop();
+      this.downloadQueue_ = new TaskQueue("syncDownload");
+      this.downloadQueue_.logger_ = logger;
+
+      const loadContent = async () => {
+        // if (supportsDeltaWithItems) return remote.jopItem;
+
+        const task = await this.downloadQueue_.waitForResult(path);
+        if (task.error) throw task.error;
+        if (!task.result) return null;
+        return await BaseItem.unserialize(task.result); //TODO: unserialize content here
+      };
+
+      const path = remote.path;
+      let content = await loadContent();
+      result.push(content);
+    }
+
+    return result;
+  }
+
+  // TODO: unimplemented
+  public async applyDeltaToDb(options: any = {}, db: any) {
+    // TODO: current assumming only metadata so no need for this
+    // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
+    if (!options.deltaResult) {
+      logger.warn("No delta result to download");
+      return;
+    }
+
+    while (true) {
+      const listResult = options.deltaResult;
+
+      // TODO: assuming metadata only
+      // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
+
+      // logger.info("supportsDeltaWithItems = ", supportsDeltaWithItems);
+
+      const remotes = listResult.items;
+
+      this.logSyncOperation(
+        "fetchingTotal",
+        null,
+        null,
+        "Fetching delta items from sync target",
+        remotes.length
+      );
+
+      const remoteIds = remotes.map((r: any) => BaseItem.pathToId(r.path));
+
+      // TODO: need a way to provide local files
+      // const locals = await BaseItem.loadItemsByIds(remoteIds);
+
+      for (const remote of remotes) {
+        let needsToDownload = true;
+
+        // File API default to false
+        // if (this.api().supportsAccurateTimestamp) {
+        //   const local = locals.find(
+        //     (l) => l.id === BaseItem.pathToId(remote.path)
+        //   );
+        //   if (local && local.updated_time === remote.jop_updated_time)
+        //     needsToDownload = false;
+        // }
+
+        // if (supportsDeltaWithItems) {
+        //   needsToDownload = false;
+        // }
+
+        if (needsToDownload) {
+          this.downloadQueue_.push(remote.path, async () => {
+            return this.apiCall("get", remote.path);
+          });
+        }
+      }
+
+      // Comparision of locals and remotes to determine sync action (download or not)
+      for (let i = 0; i < remotes.length; i++) {
+        this.logSyncOperation(
+          "fetchingProcessed",
+          null,
+          null,
+          "Processing fetched item"
+        );
+
+        const remote = remotes[i];
+        if (!BaseItem.isSystemPath(remote.path)) continue; // The delta API might return things like the .sync, .resource or the root folder
+
+        if (this.downloadQueue_) this.downloadQueue_.stop();
+        this.downloadQueue_ = new TaskQueue("syncDownload");
+        this.downloadQueue_.logger_ = logger;
+
+        const loadContent = async () => {
+          // if (supportsDeltaWithItems) return remote.jopItem;
+
+          const task = await this.downloadQueue_.waitForResult(path);
+          if (task.error) throw task.error;
+          if (!task.result) return null;
+          return await BaseItem.unserialize(task.result); //TODO: unserialize content here
+        };
+
+        const path = remote.path;
+        const remoteId = BaseItem.pathToId(path);
+        let action: SyncAction = null;
+        let reason = "";
+        let local = locals.find((l) => l.id === remoteId);
+        let ItemClass = null;
+        let content = null;
+
+        // TODO: inject database to this step
+        try {
+          if (!local) {
+            if (remote.isDeleted !== true) {
+              action = SyncAction.CreateLocal;
+              reason = "remote exists but local does not";
+              content = await loadContent();
+              ItemClass = content ? BaseItem.itemClass(content) : null;
+            }
+          } else {
+            ItemClass = BaseItem.itemClass(local);
+            local = ItemClass.filter(local);
+            if (remote.isDeleted) {
+              action = SyncAction.DeleteLocal;
+              reason = "remote has been deleted";
+            } else {
+              if (
+                this.api().supportsAccurateTimestamp &&
+                remote.jop_updated_time === local.updated_time
+              ) {
+                // Nothing to do, and no need to fetch the content
+              } else {
+                content = await loadContent();
+                if (content && content.updated_time > local.updated_time) {
+                  action = SyncAction.UpdateLocal;
+                  reason = "remote is more recent than local";
+                }
+              }
+            }
+          }
+        } catch (error) {
+          if (error.code === "rejectedByTarget") {
+            this.progressReport_.errors.push(error);
+            logger.warn(`Rejected by target: ${path}: ${error.message}`);
+            action = null;
+          } else {
+            error.message = `On file ${path}: ${error.message}`;
+            throw error;
+          }
+        }
+
+        // if (
+        //   this.testingHooks_.indexOf("skipRevisions") >= 0 &&
+        //   content &&
+        //   content.type_ === BaseModel.TYPE_REVISION
+        // )
+        //   action = null;
+
+        if (!action) continue;
+
+        this.logSyncOperation(action, local, remote, reason);
+
+        if (
+          action === SyncAction.CreateLocal ||
+          action === SyncAction.UpdateLocal
+        ) {
+          if (content === null) {
+            logger.warn(
+              `Remote has been deleted between now and the delta() call? In that case it will be handled during the next sync: ${path}`
+            );
+            continue;
+          }
+          content = ItemClass.filter(content);
+
+          // 2017-12-03: This was added because the new user_updated_time and user_created_time properties were added
+          // to the items. However changing the database is not enough since remote items that haven't been synced yet
+          // will not have these properties and, since they are required, it would cause a problem. So this check
+          // if they are present and, if not, set them to a reasonable default.
+          // Let's leave these two lines for 6 months, by which time all the clients should have been synced.
+          if (!content.user_updated_time)
+            content.user_updated_time = content.updated_time;
+          if (!content.user_created_time)
+            content.user_created_time = content.created_time;
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
+          const options: any = {
+            autoTimestamp: false,
+            nextQueries: BaseItem.updateSyncTimeQueries(
+              syncTargetId,
+              content,
+              time.unixMs()
+            ),
+            changeSource: ItemChange.SOURCE_SYNC,
+          };
+          if (action === SyncAction.CreateLocal) options.isNew = true;
+          if (action === SyncAction.UpdateLocal) options.oldItem = local;
+
+          const creatingOrUpdatingResource =
+            content.type_ === BaseModel.TYPE_RESOURCE &&
+            (action === SyncAction.CreateLocal ||
+              action === SyncAction.UpdateLocal);
+
+          if (creatingOrUpdatingResource) {
+            if (content.size >= this.maxResourceSize()) {
+              await handleCannotSyncItem(
+                ItemClass,
+                syncTargetId,
+                content,
+                `File "${
+                  content.title
+                }" is larger than allowed ${this.maxResourceSize()} bytes. Beyond this limit, the mobile app would crash.`,
+                BaseItem.SYNC_ITEM_LOCATION_REMOTE
+              );
+              continue;
+            }
+
+            await ResourceLocalState.save({
+              resource_id: content.id,
+              fetch_status: Resource.FETCH_STATUS_IDLE,
+            });
+          }
+
+          if (content.type_ === ModelType.MasterKey) {
+            // Special case for master keys - if we download
+            // one, we only add it to the store if it's not
+            // already there. That can happen for example if
+            // the new E2EE migration was processed at a
+            // time a master key was still on the sync
+            // target. In that case, info.json would not
+            // have it.
+            //
+            // If info.json already has the key we shouldn't
+            // update because the most up to date keys
+            // should always be in info.json now.
+            const existingMasterKey = await MasterKey.load(content.id);
+            if (!existingMasterKey) {
+              logger.info(
+                `Downloaded a master key that was not in info.json - adding it to the store. ID: ${content.id}`
+              );
+              await MasterKey.save(content);
+            }
+          } else {
+            await ItemClass.save(content, options);
+          }
+
+          if (creatingOrUpdatingResource)
+            this.dispatch({
+              type: "SYNC_CREATED_OR_UPDATED_RESOURCE",
+              id: content.id,
+            });
+
+          // if (!hasAutoEnabledEncryption && content.type_ === BaseModel.TYPE_MASTER_KEY && !masterKeysBefore) {
+          // 	hasAutoEnabledEncryption = true;
+          // 	logger.info('One master key was downloaded and none was previously available: automatically enabling encryption');
+          // 	logger.info('Using master key: ', content.id);
+          // 	await this.encryptionService().enableEncryption(content);
+          // 	await this.encryptionService().loadMasterKeysFromSettings();
+          // 	logger.info('Encryption has been enabled with downloaded master key as active key. However, note that no password was initially supplied. It will need to be provided by user.');
+          // }
+
+          if (content.encryption_applied)
+            this.dispatch({ type: "SYNC_GOT_ENCRYPTED_ITEM" });
+        } else if (action === SyncAction.DeleteLocal) {
+          if (local.type_ === BaseModel.TYPE_FOLDER) {
+            localFoldersToDelete.push(local);
+            continue;
+          }
+
+          const ItemClass = BaseItem.itemClass(local.type_);
+          await ItemClass.delete(local.id, {
+            trackDeleted: false,
+            changeSource: ItemChange.SOURCE_SYNC,
+            sourceDescription: "sync: deleteLocal",
+          });
+        }
+      }
+
+      // If user has cancelled, don't record the new context (2) so that synchronisation
+      // can start again from the previous context (1) next time. It is ok if some items
+      // have been synced between (1) and (2) because the loop above will handle the same
+      // items being synced twice as an update. If the local and remote items are identical
+      // the update will simply be skipped.
+      if (!hasCancelled) {
+        if (options.saveContextHandler) {
+          const deltaToSave = { ...listResult.context };
+          // Remove these two variables because they can be large and can be rebuilt
+          // the next time the sync is started.
+          delete deltaToSave.statsCache;
+          delete deltaToSave.statIdsCache;
+          options.saveContextHandler({ delta: deltaToSave });
+        }
+
+        if (!listResult.hasMore) {
+          newDeltaContext = listResult.context;
+          break;
+        }
+        context = listResult.context;
+      }
+    }
+  }
+
   // GET single item based on path or id
   public async getItem(options: { path?: string; id?: string }) {
     if (options.id) {
@@ -450,7 +818,108 @@ export default class Synchronizer {
     return null;
   }
 
+  public async verifySyncInfo() {
+    let remoteInfo = await fetchSyncInfo(this.api());
+    logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
+    // eventManager.emit(EventName.SessionEstablished);
+
+    let syncTargetIsNew = false;
+
+    if (!remoteInfo.version) {
+      throw new Error(
+        "No remote sync info file found. Please initialize sync target with client first."
+      );
+
+      // logger.info("Sync target is new - setting it up...");
+      // await this.migrationHandler().upgrade(Setting.value("syncVersion"));
+      // remoteInfo = await fetchSyncInfo(this.api());
+      // syncTargetIsNew = true;
+    }
+
+    logger.info("Sync target is already setup - checking it...");
+
+    // TODO: more details compatability check on sync version
+    // await this.migrationHandler().checkCanSync(remoteInfo);
+    if (remoteInfo.version !== 3)
+      throw new Error(
+        `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
+      );
+
+    //TODO: app version (a.k.a library version check) if suits with sync version
+    // const appVersion = shim.appVersion();
+    // if (appVersion !== "unknown") checkIfCanSync(remoteInfo, appVersion);
+
+    // let localInfo = await localSyncInfo();
+    // logger.info("Sync target local info:", localInfo.filterSyncInfo());
+
+    // localInfo = await this.setPpkIfNotExist(localInfo, remoteInfo);
+    const ppk = remoteInfo.ppk;
+
+    // TODO: handle ppk
+    if (ppk) {
+      setE2EEnabled(true);
+
+      if (newInfo.e2ee) {
+        const mk = getActiveMasterKey(newInfo);
+        await setupAndEnableEncryption(this.encryptionService(), mk);
+      } else {
+        await setupAndDisableEncryption(this.encryptionService());
+      }
+    }
+
+    // if (!syncInfoEquals(localInfo, remoteInfo)) {
+    //   // if (syncTargetIsNew && localInfo.activeMasterKeyId) {
+    //   //   localInfo = setMasterKeyHasBeenUsed(
+    //   //     localInfo,
+    //   //     localInfo.activeMasterKeyId
+    //   //   );
+    //   // }
+
+    //   // console.info('LOCAL', localInfo);
+    //   // console.info('REMOTE', remoteInfo);
+
+    //   let newInfo = mergeSyncInfos(localInfo, remoteInfo);
+    //   if (newInfo.activeMasterKeyId)
+    //     newInfo = setMasterKeyHasBeenUsed(newInfo, newInfo.activeMasterKeyId);
+    //   const previousE2EE = localInfo.e2ee;
+    //   logger.info(
+    //     "Sync target info differs between local and remote - merging infos: ",
+    //     newInfo.toObject()
+    //   );
+
+    //   await this.lockHandler().acquireLock(
+    //     LockType.Exclusive,
+    //     this.lockClientType(),
+    //     this.clientId_,
+    //     { clearExistingSyncLocksFromTheSameClient: true }
+    //   );
+    //   await uploadSyncInfo(this.api(), newInfo);
+    //   await saveLocalSyncInfo(newInfo);
+    //   await this.lockHandler().releaseLock(
+    //     LockType.Exclusive,
+    //     this.lockClientType(),
+    //     this.clientId_
+    //   );
+
+    //   // console.info('NEW', newInfo);
+
+    //   if (newInfo.e2ee !== previousE2EE) {
+    //     if (newInfo.e2ee) {
+    //       const mk = getActiveMasterKey(newInfo);
+    //       await setupAndEnableEncryption(this.encryptionService(), mk);
+    //     } else {
+    //       await setupAndDisableEncryption(this.encryptionService());
+    //     }
+    //   }
+    // } else {
+    //   // Set it to remote anyway so that timestamps are the same
+    //   // Note: that's probably not needed anymore?
+    //   // await uploadSyncInfo(this.api(), remoteInfo);
+    // }
+  }
+
   public async createItems(options: any = null) {
+    verifySyncInfo();
     // PREPARATION
     if (!options) options = {};
 
@@ -570,10 +1039,7 @@ export default class Synchronizer {
         logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
         // eventManager.emit(EventName.SessionEstablished);
 
-        let syncTargetIsNew = false;
-
         if (!remoteInfo.version) {
-          // TODO: initial sync on lib
           throw new Error(
             "Sync target must be available before uploading item"
           );
@@ -769,7 +1235,7 @@ export default class Synchronizer {
         // in the database for extra safety. In a future
         // version, once it's confirmed that the new E2EE system
         // works well, we can delete them.
-        // if (local.type_ === ModelType.MasterKey) action = null;
+        if (local.type_ === ModelType.MasterKey) action = null; // user should not add master key to upload list, this code is for safety check
 
         // TODO: in case of resource fail this stills log
         this.logSyncOperation(action, local, remote, reason);
@@ -781,9 +1247,13 @@ export default class Synchronizer {
           try {
             console.log("Processing resource: ", local);
             const remoteContentPath = resourceRemotePath(local.id);
-            //TODO: full path for sync upload
-            // const result = await Resource.fullPathForSyncUpload(local);
-            const localResourceContentPath = local.localResourceContentPath;
+            const { path: localResourceContentPath, resource } =
+              await fullPathForSyncUpload(local); // will encryption if E2E is on, else it's the same path as user provided
+
+            // path changed === encrypted -> update resource
+            if (localResourceContentPath !== local.localResourceContentPath)
+              local = resource;
+
             // const resource = result.resource;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
             // local = resource as any;

@@ -23,7 +23,7 @@ export const samplePngResource = () => {
     file_extension: "png",
     encryption_cipher_text: "",
     encryption_applied: 0,
-    encryption_blob_encrypted: 0,
+    encryption_blob_encrypted: 0, // switch to 1 for encrypted
     size: 331388,
     is_shared: 0,
     share_id: "",
@@ -46,7 +46,6 @@ export const testNoteItem = () => {
   // let item = new Note();
 
   const sample = {
-    // TODO: id gen here
     id: createUUID(),
     parent_id: "1b0663e319074c0cbd966678dabde0b8",
     title: "Test sync note",
