@@ -3,6 +3,7 @@ import { FileApi } from "../FileApi/FileApi";
 import FileApiDriverLocal from "../FileApi/Driver/FsDriver/file-api-driver-local";
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { AppType } from "@joplin/lib/models/Setting";
+import { fetchSyncInfo } from "../Synchronizer/syncInfoUtils";
 
 export class FileSystemSyncTarget extends BaseSyncTarget {
   public static id() {
@@ -32,15 +33,11 @@ export class FileSystemSyncTarget extends BaseSyncTarget {
     fileApi.setSyncTargetId(FileSystemSyncTarget.id());
     await driver.mkdir(syncPath);
     this.fileApi_ = fileApi;
+
     return fileApi;
   }
 
   public async initSynchronizer() {
-    return new Synchronizer(
-      this.db(),
-      await this.fileApi(),
-      //TODO: Change app type (see Synchronizer get lock from app type)
-      AppType.Desktop
-    );
+    return new Synchronizer(this.db(), await this.fileApi(), AppType.Desktop);
   }
 }

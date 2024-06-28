@@ -58,7 +58,6 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
     return "OneDriveLogin";
   }
   private initApi(authInfo: authInfo) {
-    // TODO: public
     const isPublic = false;
 
     this.api_ = new OneDriveApi(authInfo.id, authInfo.secret, isPublic);

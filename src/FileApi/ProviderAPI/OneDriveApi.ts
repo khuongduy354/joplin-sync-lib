@@ -18,7 +18,7 @@ export class OneDriveApi {
   public constructor(
     clientId: string,
     clientSecret: string,
-    isPublic: boolean,
+    isPublic: boolean
   ) {
     this.clientId_ = clientId;
     this.clientSecret_ = clientSecret;
@@ -79,7 +79,7 @@ export class OneDriveApi {
     const driveId = this.accountProperties_.driveId;
     const r = await this.execJson(
       "GET",
-      `/me/drives/${driveId}/special/approot`,
+      `/me/drives/${driveId}/special/approot`
     );
     return `${r.parentReference.path}/${r.name}`;
   }
@@ -92,7 +92,9 @@ export class OneDriveApi {
       redirect_uri: redirectUri,
       prompt: "login",
     };
-    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${helper.objectToQueryString(query)}`;
+    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${helper.objectToQueryString(
+      query
+    )}`;
   }
 
   public async execTokenRequest(code: string, redirectUri: string) {
@@ -114,7 +116,7 @@ export class OneDriveApi {
     if (!r.ok) {
       const text = await r.text();
       throw new Error(
-        `Could not retrieve auth code: ${r.status}: ${r.statusText}: ${text}`,
+        `Could not retrieve auth code: ${r.status}: ${r.statusText}: ${text}`
       );
     }
 
@@ -147,7 +149,7 @@ export class OneDriveApi {
     url: string,
     handle: any,
     buffer: any,
-    options: any,
+    options: any
   ) {
     options = { ...options };
     if (!options.method) {
@@ -161,7 +163,7 @@ export class OneDriveApi {
     if (buffer) {
       options.body = buffer.slice(
         options.startByte,
-        options.startByte + options.contentLength,
+        options.startByte + options.contentLength
       );
     } else {
       const chunk = await singleton
@@ -219,7 +221,9 @@ export class OneDriveApi {
             contentLength = chunkSize;
           }
           logger.debug(
-            `Uploading File Fragment ${(startByte / 1048576).toFixed(2)} - ${(endByte / 1048576).toFixed(2)} from ${(byteSize / 1048576).toFixed(2)} Mbit ...`,
+            `Uploading File Fragment ${(startByte / 1048576).toFixed(2)} - ${(
+              endByte / 1048576
+            ).toFixed(2)} from ${(byteSize / 1048576).toFixed(2)} Mbit ...`
           );
           const headers = {
             "Content-Length": contentLength,
@@ -244,7 +248,7 @@ export class OneDriveApi {
           `Couldn't upload ${type} > 4 Mb. Got unhandled error:`,
           error ? error.code : "",
           error ? error.message : "",
-          error,
+          error
         );
         throw error;
       } finally {
@@ -286,7 +290,7 @@ export class OneDriveApi {
     path: string,
     query: any = null,
     data: any = null,
-    options: any = null,
+    options: any = null
   ) {
     if (!path) throw new Error("Path is required");
 
@@ -351,7 +355,6 @@ export class OneDriveApi {
           response = await singleton.fetchBlob(url, options);
         }
       } catch (error: any) {
-        //TODO: retry
         // if (singleton.fetchRequestCanBeRetried(error)) {
         // 	await handleRequestRepeat(error);
         // 	continue;
@@ -360,7 +363,7 @@ export class OneDriveApi {
           "Got unhandled error:",
           error ? error.code : "",
           error ? error.message : "",
-          error,
+          error
         );
         throw error;
         // }
@@ -437,7 +440,7 @@ export class OneDriveApi {
           }
 
           logger.info(
-            `OneDrive Throttle, sync thread sleeping for ${sleepSeconds} seconds...`,
+            `OneDrive Throttle, sync thread sleeping for ${sleepSeconds} seconds...`
           );
           // await handleRequestRepeat(error, sleepSeconds);
           continue;
@@ -461,7 +464,7 @@ export class OneDriveApi {
     }
 
     throw new Error(
-      `Could not execute request after multiple attempts: ${method} ${url}`,
+      `Could not execute request after multiple attempts: ${method} ${url}`
     );
   }
 
@@ -473,7 +476,7 @@ export class OneDriveApi {
     try {
       const response = await this.exec(
         "GET",
-        "https://graph.microsoft.com/v1.0/me/drive",
+        "https://graph.microsoft.com/v1.0/me/drive"
       );
       const data = await response.json();
       const accountProperties = {
@@ -483,7 +486,7 @@ export class OneDriveApi {
       return accountProperties;
     } catch (error: any) {
       throw new Error(
-        `Could not retrieve account details (drive ID, Account type. Error code: ${error.code}, Error message: ${error.message}`,
+        `Could not retrieve account details (drive ID, Account type. Error code: ${error.code}, Error message: ${error.message}`
       );
     }
   }
@@ -492,7 +495,7 @@ export class OneDriveApi {
     method: string,
     path: string,
     query: any = null,
-    data: any = null,
+    data: any = null
   ) {
     const response = await this.exec(method, path, query, data);
     const errorResponseText = await response.text();
@@ -510,7 +513,7 @@ export class OneDriveApi {
     method: string,
     path: string,
     query: any = null,
-    data: any = null,
+    data: any = null
   ) {
     const response = await this.exec(method, path, query, data);
     const output = await response.text();
@@ -521,7 +524,7 @@ export class OneDriveApi {
     if (!this.auth_ || !this.auth_.refresh_token) {
       this.setAuth(null);
       throw new Error(
-        "Cannot refresh token: authentication data is missing. Starting the synchronisation again may fix the problem.",
+        "Cannot refresh token: authentication data is missing. Starting the synchronisation again may fix the problem."
       );
     }
 

@@ -45,7 +45,6 @@ export const setAppMinVersion = (v: string) => {
 export async function migrateLocalSyncInfo(db: JoplinDatabase) {
   if (Setting.value("syncInfoCache")) return; // Already initialized
 
-  // TODO: if the sync info is changed, there should be steps to migrate from
   // v3 to v4, v4 to v5, etc.
 
   const masterKeys = await db.selectAll("SELECT * FROM master_keys");
