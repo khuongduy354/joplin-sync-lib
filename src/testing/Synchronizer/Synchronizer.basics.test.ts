@@ -97,17 +97,9 @@ describe("Synchronizer.basics", () => {
     const note = testNoteItem();
 
     const syncer = synchronizer(1);
-    // const output = await syncer.api().list(path);
-    // console.log("list path output", output);
-    console.log(
-      "Getting path tree before calling upload: ",
-      await syncer.api().list()
-    );
     const res = await syncer.createItems({ items: [note] });
     const path = BaseItem.systemPath(res.createdIds[0]);
 
-    // await synchronizerStart();
-    // const path = BaseItem.systemPath(note);
     const remote = await syncer.api().get(path);
 
     expect(!!remote).toBe(true);
@@ -151,6 +143,7 @@ describe("Synchronizer.basics", () => {
       expectedRemoteContent.replace(/ /g, "")
     );
 
+    // TODO: unserializer note content
     // let remoteContent = await fileApi().get(path);
     // const remoteContent = await Note.unserialize(remote);
 
@@ -169,6 +162,62 @@ describe("Synchronizer.basics", () => {
 
   //   const all = await allNotesFolders();
   //   await synchronizerStart();
+
+  //   await localNotesFoldersSameAsRemote(all, expect);
+  // });
+
+  // it("should pull all remote items metadata", async () => {
+  //   const folder = await Folder.save({ title: "folder1" });
+  //   await Note.save({ title: "un", parent_id: folder.id });
+  //   await synchronizerStart();
+
+  //   await switchClient(2);
+
+  //   await synchronizerStart();
+
+  //   const all = await allNotesFolders();
+
+  //   await localNotesFoldersSameAsRemote(all, expect);
+  // });
+
+  // it("should pull remote items metadata based on delta algorithm", async () => {
+  //   const folder = await Folder.save({ title: "folder1" });
+  //   await Note.save({ title: "un", parent_id: folder.id });
+  //   await synchronizerStart();
+
+  //   await switchClient(2);
+
+  //   await synchronizerStart();
+
+  //   const all = await allNotesFolders();
+
+  //   await localNotesFoldersSameAsRemote(all, expect);
+  // });
+
+  // it("should pull all remote items (including content)", async () => {
+  //   const folder = await Folder.save({ title: "folder1" });
+  //   await Note.save({ title: "un", parent_id: folder.id });
+  //   await synchronizerStart();
+
+  //   await switchClient(2);
+
+  //   await synchronizerStart();
+
+  //   const all = await allNotesFolders();
+
+  //   await localNotesFoldersSameAsRemote(all, expect);
+  // });
+
+  // it("should pull single remote item (including content)", async () => {
+  //   const folder = await Folder.save({ title: "folder1" });
+  //   await Note.save({ title: "un", parent_id: folder.id });
+  //   await synchronizerStart();
+
+  //   await switchClient(2);
+
+  //   await synchronizerStart();
+
+  //   const all = await allNotesFolders();
 
   //   await localNotesFoldersSameAsRemote(all, expect);
   // });

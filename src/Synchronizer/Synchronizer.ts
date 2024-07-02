@@ -859,12 +859,12 @@ export default class Synchronizer {
     if (ppk) {
       setE2EEnabled(true);
 
-      if (newInfo.e2ee) {
-        const mk = getActiveMasterKey(newInfo);
-        await setupAndEnableEncryption(this.encryptionService(), mk);
-      } else {
-        await setupAndDisableEncryption(this.encryptionService());
-      }
+      // if (newInfo.e2ee) {
+      //   const mk = getActiveMasterKey(newInfo);
+      //   await setupAndEnableEncryption(this.encryptionService(), mk);
+      // } else {
+      //   await setupAndDisableEncryption(this.encryptionService());
+      // }
     }
 
     // if (!syncInfoEquals(localInfo, remoteInfo)) {
@@ -919,7 +919,7 @@ export default class Synchronizer {
   }
 
   public async createItems(options: any = null) {
-    verifySyncInfo();
+    await this.verifySyncInfo();
     // PREPARATION
     if (!options) options = {};
 

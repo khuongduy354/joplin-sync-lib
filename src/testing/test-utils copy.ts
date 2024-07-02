@@ -151,4 +151,61 @@ async function afterAllCleanUp() {
   }
 }
 
-export { synchronizer, setupDatabaseAndSynchronizer, afterAllCleanUp, fileApi };
+// eslint-disable-next-line @typescript-eslint/ban-types, @typescript-eslint/no-explicit-any -- Old code before rule was applied, Old code before rule was applied
+async function expectThrow(
+  asyncFn: Function,
+  errorCode: any = undefined,
+  errorMessage: string = undefined
+) {
+  let hasThrown = false;
+  let thrownError = null;
+  try {
+    await asyncFn();
+  } catch (error) {
+    hasThrown = true;
+    thrownError = error;
+  }
+
+  if (!hasThrown) {
+    expect("not throw").toBe("throw");
+  } else if (errorMessage !== undefined) {
+    if (thrownError.message !== errorMessage) {
+      expect(`error message: ${thrownError.message}`).toBe(
+        `error message: ${errorMessage}`
+      );
+    } else {
+      expect(true).toBe(true);
+    }
+  } else if (thrownError.code !== errorCode) {
+    console.error(thrownError);
+    expect(`error code: ${thrownError.code}`).toBe(`error code: ${errorCode}`);
+  } else {
+    expect(true).toBe(true);
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/ban-types -- Old code before rule was applied
+async function expectNotThrow(asyncFn: Function) {
+  let thrownError = null;
+  try {
+    await asyncFn();
+  } catch (error) {
+    thrownError = error;
+  }
+
+  if (thrownError) {
+    console.error(thrownError);
+    expect(thrownError.message).toBe("");
+  } else {
+    expect(true).toBe(true);
+  }
+}
+
+export {
+  synchronizer,
+  setupDatabaseAndSynchronizer,
+  afterAllCleanUp,
+  fileApi,
+  expectThrow,
+  expectNotThrow,
+};
