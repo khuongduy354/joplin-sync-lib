@@ -1,3 +1,4 @@
+import BaseModel from "@joplin/lib/BaseModel";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import Note from "@joplin/lib/models/Note";
 import moment from "moment";
@@ -40,6 +41,55 @@ export const samplePngResource = () => {
   // item = { ...item, ...sample };
   return sample;
 };
+export async function unserializeWithoutSQLite(content: string) {
+  const lines = content.split("\n");
+  let output: any = {};
+  let state = "readingProps";
+  const body: string[] = [];
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    let line = lines[i];
+
+    if (state === "readingProps") {
+      line = line.trim();
+
+      if (line === "") {
+        state = "readingBody";
+        continue;
+      }
+
+      const p = line.indexOf(":");
+      if (p < 0)
+        throw new Error(`Invalid property format: ${line}: ${content}`);
+      const key = line.substr(0, p).trim();
+      const value = line.substr(p + 1).trim();
+      output[key] = value;
+    } else if (state === "readingBody") {
+      body.splice(0, 0, line);
+    }
+  }
+
+  if (!output.type_)
+    throw new Error(`Missing required property: type_: ${content}`);
+  output.type_ = Number(output.type_);
+
+  if (body.length) {
+    const title = body.splice(0, 2);
+    output.title = title[0];
+  }
+
+  if (output.type_ === BaseModel.TYPE_NOTE) output.body = body.join("\n");
+
+  const ItemClass = BaseItem.itemClass(output.type_);
+  output = ItemClass.removeUnknownFields(output);
+
+  // for (const n in output) {
+  //   if (!output.hasOwnProperty(n)) continue;
+  //   output[n] = await this.unserialize_format(output.type_, n, output[n]);
+  // }
+
+  return output;
+}
 export const testNoteItem = () => {
   // const itemClass = BaseItem.itemClass(1);
 
@@ -121,10 +171,10 @@ export function serialize_format(propName: string, propValue: any) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
 export async function serializeModel(item: any, shownKeys: any[] = null) {
-  // if (shownKeys === null) {
-  //   shownKeys = this.itemClass(item).fieldNames();
-  //   shownKeys.push("type_");
-  // }
+  if (shownKeys === null) {
+    shownKeys = BaseItem.itemClass(item).fieldNames();
+    shownKeys.push("type_");
+  }
 
   // item = this.filter(item);
 

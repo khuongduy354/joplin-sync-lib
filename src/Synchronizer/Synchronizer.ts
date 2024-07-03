@@ -799,23 +799,29 @@ export default class Synchronizer {
       }
     }
   }
-
   // GET single item based on path or id
-  public async getItem(options: { path?: string; id?: string }) {
+  public async getItem(
+    options: {
+      path?: string;
+      id?: string;
+      unserializeItem?: boolean;
+    } = { unserializeItem: false }
+  ) {
+    let item = null;
     if (options.id) {
       // id is prioritized
-      return await this.apiCall("get", BaseItem.systemPath(options.id));
+      item = await this.apiCall("get", BaseItem.systemPath(options.id));
     }
     if (options.path) {
-      return await this.apiCall("get", options.path);
+      item = await this.apiCall("get", options.path);
     }
 
-    //TODO: unserialize content here
-    // if(options.serialize){
+    if (item && options.unserializeItem === true) {
+      // unserialize option
+      item = await BaseItem.unserialize(item);
+    }
 
-    // }
-
-    return null;
+    return item;
   }
 
   public async verifySyncInfo() {
@@ -918,6 +924,83 @@ export default class Synchronizer {
     // }
   }
 
+  public async updateItem(options: any = null) {
+    const { item, lastSync } = options;
+    const itemId = item.id;
+
+    if (!itemId) throw new Error("Item id is required");
+    if (!lastSync) throw new Error("Last modified date is required");
+    await this.verifySyncInfo();
+
+    // Update a single item, provided a last modified date, if last modified is not matched, it will aborted and a pull request is required
+    let remoteItem = await this.getItem({ id: itemId, unserializeItem: true });
+    if (!remoteItem) throw new Error("Item not found");
+
+    // check for conflicts
+    if (remoteItem.updated_time > lastSync)
+      return {
+        status: "conflicted",
+        message:
+          "Both local and remote has been changed since last sync, a conflict may have occured, please resolve it first.",
+        remoteItem,
+      };
+
+    // if no conflict found, update the item
+    // acquire lock
+    logger.info(
+      "No remote changes since last sync, proceeding to update the data..."
+    );
+    const syncLock = await this.lockHandler().acquireLock(
+      LockType.Sync,
+      this.lockClientType(),
+      this.clientId_
+    );
+
+    this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
+      logger.warn(
+        "Could not refresh lock - cancelling sync. Error was:",
+        error
+      );
+      this.syncTargetIsLocked_ = true;
+      void this.cancel();
+    });
+
+    // sanitize input and update item
+
+    const update_time = time.unixMs();
+    const newItem = {
+      user_updated_time: update_time,
+      updated_time: update_time,
+      ...remoteItem,
+    };
+    if (options.item.body) newItem.body = options.item.body;
+    if (options.item.title) newItem.title = options.item.title;
+
+    const ItemClass = BaseItem.itemClass(remoteItem);
+    const path = BaseItem.systemPath(itemId);
+    const itemUploader = new ItemUploader(this.api(), this.apiCall);
+    itemUploader.serializeAndUploadItem(ItemClass, path, newItem);
+
+    // release lock
+    if (syncLock) {
+      this.lockHandler().stopAutoLockRefresh(syncLock);
+      await this.lockHandler().releaseLock(
+        LockType.Sync,
+        this.lockClientType(),
+        this.clientId_
+      );
+      this.syncTargetIsLocked_ = false;
+    }
+    return {
+      status: "success",
+      message:
+        "Item updated successfully, please save newItem.updated_time for future sync",
+      newItem,
+      oldItem: remoteItem,
+      newSyncTime: update_time,
+    };
+  }
+
   public async createItems(options: any = null) {
     await this.verifySyncInfo();
     // PREPARATION
@@ -931,7 +1014,7 @@ export default class Synchronizer {
       throw error;
     }
 
-    this.state_ = "in_progress";
+    // this.state_ = "in_progress";
 
     this.onProgress_ = options.onProgress ? options.onProgress : function () {};
     this.progressReport_ = { errors: [] };
@@ -1159,13 +1242,9 @@ export default class Synchronizer {
 
       // TODO: batch here to 10
       const locals = options.items as BaseItem[];
+
       // id generation
       locals.forEach((item) => (item.id = createUUID()));
-
-      console.log(
-        "Getting path tree before preupload: ",
-        await this.api().list()
-      );
 
       await itemUploader.preUploadItems(locals);
 
@@ -1457,7 +1536,7 @@ export default class Synchronizer {
       //   isFullSync: this.isFullSync(syncSteps),
       // });
 
-      this.state_ = "idle";
+      // this.state_ = "idle";
 
       if (errorToThrow) throw errorToThrow;
 
