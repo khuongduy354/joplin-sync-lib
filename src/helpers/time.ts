@@ -59,6 +59,11 @@ class Time {
     return Math.floor(ms / 1000);
   }
 
+  public IsoToUnixMs(iso: string) {
+    iso = !iso ? "0" : moment(iso, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("x");
+    return parseInt(iso, 10);
+  }
+
   public unixMsToIso(ms: number) {
     return `${moment
       .unix(ms / 1000)
