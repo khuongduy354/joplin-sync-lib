@@ -109,7 +109,6 @@ export class SingleTon extends AbstractSingleTon {
       maxRedirects: options.maxRedirects,
     };
 
-    //TODO: proxy settings
     // const resolvedProxyUrl = resolveProxyUrl(proxySettings.proxyUrl);
     // requestOptions.agent = (resolvedProxyUrl && proxySettings.proxyEnabled) ? shim.proxyAgent(url.href, resolvedProxyUrl) : null;
 
@@ -209,7 +208,6 @@ export class SingleTon extends AbstractSingleTon {
     // 		return response;
     // 	} catch (error) {
     // 		throw error;
-    // 		//TODO: retry here
     // 		// if (shim.fetchRequestCanBeRetried(error)) {
     // 		// 	retryCount++;
     // 		// 	if (retryCount > options.maxRetry) throw error;

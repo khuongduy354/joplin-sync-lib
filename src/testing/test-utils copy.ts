@@ -10,7 +10,7 @@ import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
 let synchronizers_: Synchronizer[] = [];
 const fileApis_: Record<number, FileApi> = {};
 let currentClient_ = 1;
-let syncTargetId_: number = 1; //TODO: memory sync target id
+let syncTargetId_: number = 1; // memory sync target id
 
 function synchronizer(id: number = null) {
   if (id === null) id = currentClient_;
@@ -20,7 +20,7 @@ function synchronizer(id: number = null) {
 async function initFileApi() {
   if (fileApis_[syncTargetId_]) return;
 
-  // TODO: default is file memory sync target
+  // default is file memory sync target
   const isNetworkSyncTarget_ = false;
   const fileApi = new FileApi("/root", new FileApiDriverMemory());
 
@@ -106,11 +106,11 @@ async function setupDatabaseAndSynchronizer(id: number, options: any = null) {
   // await fs.mkdirp(pluginDir(id));
 
   if (!synchronizers_[id]) {
-    // TODO: default is file memory sync target
+    // default is file memory sync target
     // const SyncTargetClass = SyncTargetRegistry.classById(syncTargetId_);
     // const syncTarget = new SyncTargetClass(db(id));
 
-    //TODO: memory sync target as default testing
+    // memory sync target as default testing
     const syncTarget = new MemorySyncTarget(null);
     await initFileApi();
     // await initFileApi();

@@ -444,7 +444,7 @@ export default class Synchronizer {
 
     const listResult = options.deltaResult;
 
-    // TODO: assuming metadata only
+    // assuming metadata only
     // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
 
     // logger.info("supportsDeltaWithItems = ", supportsDeltaWithItems);
@@ -598,7 +598,7 @@ export default class Synchronizer {
           const task = await this.downloadQueue_.waitForResult(path);
           if (task.error) throw task.error;
           if (!task.result) return null;
-          return await BaseItem.unserialize(task.result); //TODO: unserialize content here
+          return await BaseItem.unserialize(task.result);
         };
 
         const path = remote.path;
@@ -844,21 +844,11 @@ export default class Synchronizer {
 
     logger.info("Sync target is already setup - checking it...");
 
-    // TODO: more details compatability check on sync version
-    // await this.migrationHandler().checkCanSync(remoteInfo);
     if (remoteInfo.version !== 3)
       throw new Error(
         `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
       );
 
-    //TODO: app version (a.k.a library version check) if suits with sync version
-    // const appVersion = shim.appVersion();
-    // if (appVersion !== "unknown") checkIfCanSync(remoteInfo, appVersion);
-
-    // let localInfo = await localSyncInfo();
-    // logger.info("Sync target local info:", localInfo.filterSyncInfo());
-
-    // localInfo = await this.setPpkIfNotExist(localInfo, remoteInfo);
     const ppk = remoteInfo.ppk;
 
     // TODO: handle ppk
@@ -1469,7 +1459,6 @@ export default class Synchronizer {
           // The solution would be to use something like an etag (a simple counter incremented on every change) to make sure each
           // change is uniquely identified. Leaving it like this for now.
 
-          // TODO: this is done by user
           // if (canSync) {
           //   // 2018-01-21: Setting timestamp is not needed because the delta() logic doesn't rely
           //   // on it (instead it uses a more reliable `context` object) and the itemsThatNeedSync loop
@@ -1484,7 +1473,7 @@ export default class Synchronizer {
           // }
         }
 
-        // TODO: callback for conflict handling
+        // callback for conflict handling, no conflict here, since item is newly created
         // await handleConflictAction(
         //   action,
         //   ItemClass,

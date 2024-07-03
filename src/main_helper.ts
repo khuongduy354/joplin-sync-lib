@@ -2,7 +2,11 @@ import BaseItem from "@joplin/lib/models/BaseItem";
 import { initDb } from "./Database/Database";
 import { FileSystemSyncTarget } from "./SyncTarget/FileSystemSyncTarget";
 import Note from "@joplin/lib/models/Note";
-import { samplePngResource, serializeModel } from "./helpers/item";
+import {
+  samplePngResource,
+  serializeModel,
+  unserializeWithoutSQLite,
+} from "./helpers/item";
 import Resource from "@joplin/lib/models/Resource";
 import { serializeForSync, setE2EEnabled } from "./E2E";
 
@@ -47,6 +51,7 @@ export function loadClasses() {
   // override some classes
   BaseItem.serialize = serializeModel;
   BaseItem.serializeForSync = serializeForSync;
+  BaseItem.unserialize = unserializeWithoutSQLite;
 
   BaseItem.loadClass("Note", Note);
   BaseItem.loadClass("Resource", Resource);
