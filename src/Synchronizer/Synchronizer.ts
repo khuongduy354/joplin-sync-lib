@@ -945,6 +945,14 @@ export default class Synchronizer {
         remoteItem,
       };
 
+    if (remoteItem.updated_time < lastSync) {
+      return {
+        status: "inaccurate timestamp",
+        message:
+          "Remote item hasn't synced initial with this client, or timestamp is incorrect, please pull changes and resolve",
+      };
+    }
+
     // if no conflict found, update the item
     // acquire lock
     logger.info(
