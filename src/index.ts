@@ -1,4 +1,4 @@
-import { loadClasses, mailClient } from "./helpers/main_helper";
+import { loadClasses } from "./helpers/main_helper";
 import { OCRService } from "./sample_app/ocrService";
 
 // driver code
