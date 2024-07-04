@@ -1,4 +1,3 @@
-import OcrService from "@joplin/lib/services/ocr/OcrService";
 import OcrTesseractDriver from "@joplin/lib/services/ocr/drivers/OcrDriverTesseract";
 import { FileSystemSyncTarget } from "../SyncTarget/FileSystemSyncTarget";
 import { createWorker } from "tesseract.js";
