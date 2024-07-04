@@ -1,8 +1,9 @@
 import { logger, LoggerWrapper } from "../helpers/logger";
 import { singleton } from "../singleton";
-import helper from "../helpers/index";
+import helper from "../helpers/misc";
 import { isHidden } from "@joplin/utils/path";
 import { Lock, LockClientType, LockType } from "../Synchronizer/Locks";
+import BaseItem from "@joplin/lib/models/BaseItem";
 const Mutex = require("async-mutex").Mutex;
 
 export interface MultiPutItem {
@@ -311,7 +312,7 @@ class FileApi {
 
     if (options.syncItemsOnly) {
       result.items = result.items.filter(
-        (f: any) => !f.isDir && helper.isSystemPath(f.path)
+        (f: any) => !f.isDir && BaseItem.isSystemPath(f.path)
       );
     }
 
@@ -531,8 +532,8 @@ async function basicDelta(
       return a.updated_time - b.updated_time;
     });
     newContext.statIdsCache = newContext.statsCache
-      .filter((item: any) => helper.isSystemPath(item.path))
-      .map((item: any) => helper.pathToId(item.path));
+      .filter((item: any) => BaseItem.isSystemPath(item.path))
+      .map((item: any) => BaseItem.pathToId(item.path));
     newContext.statIdsCache.sort(); // Items must be sorted to use binary search below
   }
 
@@ -599,7 +600,7 @@ async function basicDelta(
 
       if (helper.binarySearch(newContext.statIdsCache, itemId) < 0) {
         deletedItems.push({
-          path: helper.systemPath(itemId),
+          path: BaseItem.systemPath(itemId),
           isDeleted: true,
         });
       }

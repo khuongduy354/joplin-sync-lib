@@ -1,46 +1,11 @@
 import BaseModel from "@joplin/lib/BaseModel";
 import BaseItem from "@joplin/lib/models/BaseItem";
-import Note from "@joplin/lib/models/Note";
 import moment from "moment";
-import path from "path";
 import { v4 } from "uuid";
 
 export function createUUID() {
   return v4().replace(/-/g, "");
 }
-export const samplePngResource = () => {
-  let localResourceContentPath = "./src/sample_app/Storage/resource/image.png";
-  localResourceContentPath = path.resolve(localResourceContentPath);
-  const sample = {
-    localResourceContentPath, // this is new, absolute path to resource
-    title: "image.png",
-    id: createUUID(),
-    mime: "image/png",
-    filename: "",
-    created_time: "2024-06-14T02:31:45.188Z",
-    updated_time: "2024-06-14T02:31:45.188Z",
-    user_created_time: "2024-06-14T02:31:45.188Z",
-    user_updated_time: "2024-06-14T02:31:45.188Z",
-    file_extension: "png",
-    encryption_cipher_text: "",
-    encryption_applied: 0,
-    encryption_blob_encrypted: 0, // switch to 1 for encrypted
-    size: 331388,
-    is_shared: 0,
-    share_id: "",
-    master_key_id: "",
-    user_data: "",
-    blob_updated_time: 1718332305188,
-    ocr_text: "",
-    ocr_details: "",
-    ocr_status: 0,
-    ocr_error: "",
-    type_: 4,
-  };
-
-  // item = { ...item, ...sample };
-  return sample;
-};
 export async function unserializeWithoutSQLite(content: string) {
   const lines = content.split("\n");
   let output: any = {};
@@ -90,50 +55,6 @@ export async function unserializeWithoutSQLite(content: string) {
 
   return output;
 }
-export const testNoteItem = () => {
-  // const itemClass = BaseItem.itemClass(1);
-
-  // let item = new Note();
-
-  const sample = {
-    id: createUUID(),
-    parent_id: "1b0663e319074c0cbd966678dabde0b8",
-    title: "Test sync note",
-    body: "Test sync note body",
-    // TODO: create in upload process
-    // created_time: "2024-05-20T10:59:36.204Z",
-    // updated_time: "2024-05-20T10:59:37.322Z",
-    // user_created_time: "2024-05-20T10:59:36.204Z",
-    // user_updated_time: "2024-05-20T10:59:37.322Z",
-    is_conflict: 0,
-    latitude: 10.7578263,
-    longitude: 106.7012968,
-    altitude: 0.0,
-    author: "",
-    source_url: "",
-    is_todo: 1,
-    todo_due: 0,
-    todo_completed: 0,
-    // TODO: change to library
-    source: "joplin-desktop",
-    source_application: "net.cozic.joplin-desktop",
-    application_data: "",
-    order: 0,
-    encryption_cipher_text: "",
-    encryption_applied: 0,
-    markup_language: 1,
-    is_shared: 0,
-    share_id: "",
-    conflict_original_id: "",
-    master_key_id: "",
-    user_data: "",
-    deleted_time: 0,
-    type_: 1,
-  };
-
-  // item = { ...item, ...sample };
-  return sample;
-};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
 export function serialize_format(propName: string, propValue: any) {

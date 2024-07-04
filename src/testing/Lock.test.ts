@@ -11,7 +11,7 @@ import {
   expectThrow,
   setupDatabaseAndSynchronizer,
   synchronizer,
-} from "./test-utils copy";
+} from "./test-utils";
 
 // For tests with memory of file system we can use low intervals to make the tests faster.
 // However if we use such low values with network sync targets, some calls might randomly fail with
