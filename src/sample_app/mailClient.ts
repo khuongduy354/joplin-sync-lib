@@ -85,7 +85,6 @@ export async function mailClient(withAttachment = false) {
       const attachment = samplePngResource();
       items.push(attachment);
     }
-    setE2EEnable(false); // disable encryption
 
     // 2. Initialize Synchronizer
 

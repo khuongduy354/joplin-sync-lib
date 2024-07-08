@@ -76,11 +76,15 @@ export async function serializeForSync(item: BaseItemEntity): Promise<string> {
     // || !itemCanBeEncrypted(item, share) TODO: share service
   ) {
     // Normally not possible since itemsThatNeedSync should only return decrypted items
-    if (item.encryption_applied)
-      throw new JoplinError(
-        "Item is encrypted but encryption is currently disabled",
-        "cannotSyncEncrypted"
-      );
+    //   console.log(item.encryption_applied);
+    // TODO: bug here, encryption_applied === 0, but condition below returns true
+    //   if (!!item.encryption_applied)
+    //     throw new JoplinError(
+    //       `Item is encrypted but encryption is currently disabled: ${JSON.stringify(
+    //         item
+    //       )}`,
+    //       "cannotSyncEncrypted"
+    //     );
     return serialized;
   }
 

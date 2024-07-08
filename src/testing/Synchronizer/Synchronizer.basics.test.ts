@@ -25,7 +25,7 @@ describe("Synchronizer.basics", () => {
     await afterAllCleanUp();
   });
 
-  it("should upload remote and pull item", async () => {
+  it("should upload/create and pull item", async () => {
     const note = {
       type_: 1,
       id: "asds",
