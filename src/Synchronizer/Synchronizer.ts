@@ -825,6 +825,13 @@ export default class Synchronizer {
   }
 
   public async verifySyncInfo() {
+    try {
+      await this.api().initialize();
+      this.api().setTempDirName(Dirnames.Temp);
+    } catch (error) {
+      throw error;
+    }
+
     let remoteInfo = await fetchSyncInfo(this.api());
     logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
     // eventManager.emit(EventName.SessionEstablished);
@@ -915,88 +922,106 @@ export default class Synchronizer {
   }
 
   public async updateItem(options: any = null) {
-    const { item, lastSync } = options;
-    const itemId = item.id;
+    try {
+      const { item, lastSync } = options;
+      const itemId = item.id;
 
-    if (!itemId) throw new Error("Item id is required");
-    if (!lastSync) throw new Error("Last modified date is required");
-    await this.verifySyncInfo();
+      if (!itemId) throw new Error("Item id is required");
+      if (!lastSync) throw new Error("Last modified date is required");
+      await this.verifySyncInfo();
 
-    // Update a single item, provided a last modified date, if last modified is not matched, it will aborted and a pull request is required
-    let remoteItem = await this.getItem({ id: itemId, unserializeItem: true });
-    if (!remoteItem) throw new Error("Item not found");
+      // Update a single item, provided a last modified date, if last modified is not matched, it will aborted and a pull request is required
+      let remoteItem = await this.getItem({
+        id: itemId,
+        unserializeItem: true,
+      });
+      if (!remoteItem) throw new Error("Item not found");
 
-    // check for conflicts
-    if (remoteItem.updated_time > lastSync)
-      return {
-        status: "conflicted",
-        message:
-          "Both local and remote has been changed since last sync, a conflict may have occured, please resolve it first.",
-        remoteItem,
-      };
+      // check for conflicts
+      if (remoteItem.updated_time > lastSync)
+        return {
+          status: "conflicted",
+          message:
+            "Both local and remote has been changed since last sync, a conflict may have occured, please resolve it first.",
+          remoteItem,
+        };
 
-    if (remoteItem.updated_time < lastSync) {
-      return {
-        status: "inaccurate timestamp",
-        message:
-          "Remote item hasn't synced initial with this client, or timestamp is incorrect, please pull changes and resolve",
-      };
-    }
+      if (remoteItem.updated_time < lastSync) {
+        return {
+          status: "inaccurate timestamp",
+          message:
+            "Remote item hasn't synced initial with this client, or timestamp is incorrect, please pull changes and resolve",
+        };
+      }
 
-    // if no conflict found, update the item
-    // acquire lock
-    logger.info(
-      "No remote changes since last sync, proceeding to update the data..."
-    );
-    const syncLock = await this.lockHandler().acquireLock(
-      LockType.Sync,
-      this.lockClientType(),
-      this.clientId_
-    );
-
-    this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
-      logger.warn(
-        "Could not refresh lock - cancelling sync. Error was:",
-        error
+      // if no conflict found, update the item
+      // acquire lock
+      logger.info(
+        "No remote changes since last sync, proceeding to update the data..."
       );
-      this.syncTargetIsLocked_ = true;
-      void this.cancel();
-    });
-
-    // sanitize input and update item
-
-    const update_time = time.unixMs();
-    const newItem = {
-      user_updated_time: update_time,
-      updated_time: update_time,
-      ...remoteItem,
-    };
-    if (options.item.body) newItem.body = options.item.body;
-    if (options.item.title) newItem.title = options.item.title;
-
-    const ItemClass = BaseItem.itemClass(remoteItem);
-    const path = BaseItem.systemPath(itemId);
-    const itemUploader = new ItemUploader(this.api(), this.apiCall);
-    itemUploader.serializeAndUploadItem(ItemClass, path, newItem);
-
-    // release lock
-    if (syncLock) {
-      this.lockHandler().stopAutoLockRefresh(syncLock);
-      await this.lockHandler().releaseLock(
+      const syncLock = await this.lockHandler().acquireLock(
         LockType.Sync,
         this.lockClientType(),
         this.clientId_
       );
+
+      this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
+        logger.warn(
+          "Could not refresh lock - cancelling sync. Error was:",
+          error
+        );
+        this.syncTargetIsLocked_ = true;
+        void this.cancel();
+      });
+
+      // sanitize input and update item
+
+      const updateTime = time.unixMs();
+      const newItem = {
+        user_updated_time: updateTime,
+        updated_time: updateTime,
+        ...remoteItem,
+      };
+      // limiting updateable fields
+      for (let key of [
+        "title",
+        "body",
+        "ocr_details",
+        "ocr_text",
+        "ocr_status",
+        "ocr_error",
+      ]) {
+        if (options.item[key]) newItem[key] = options.item[key];
+      }
+
+      const ItemClass = BaseItem.itemClass(remoteItem);
+      const path = BaseItem.systemPath(itemId);
+      const itemUploader = new ItemUploader(this.api(), this.apiCall);
+
+      console.log("New item: ", newItem);
+      await itemUploader.serializeAndUploadItem(ItemClass, path, newItem);
+
+      // release lock
+      if (syncLock) {
+        this.lockHandler().stopAutoLockRefresh(syncLock);
+        await this.lockHandler().releaseLock(
+          LockType.Sync,
+          this.lockClientType(),
+          this.clientId_
+        );
+      }
       this.syncTargetIsLocked_ = false;
+      return {
+        status: "success",
+        message:
+          "Item updated successfully, please save newItem.updated_time for future sync",
+        newItem,
+        oldItem: remoteItem,
+        newSyncTime: updateTime,
+      };
+    } catch (err) {
+      throw err;
     }
-    return {
-      status: "success",
-      message:
-        "Item updated successfully, please save newItem.updated_time for future sync",
-      newItem,
-      oldItem: remoteItem,
-      newSyncTime: update_time,
-    };
   }
 
   public async createItems(options: any = null) {
@@ -1063,13 +1088,6 @@ export default class Synchronizer {
     let errorToThrow = null;
     let syncLock = null;
 
-    try {
-      await this.api().initialize();
-      this.api().setTempDirName(Dirnames.Temp);
-    } catch (error) {
-      throw error;
-    }
-
     syncLock = await this.lockHandler().acquireLock(
       LockType.Sync,
       this.lockClientType(),
@@ -1104,7 +1122,14 @@ export default class Synchronizer {
     const locals = options.items as BaseItem[];
 
     // id generation
-    locals.forEach((item) => (item.id = createUUID()));
+    locals.forEach((item) => {
+      item.id = createUUID();
+      const timeNow = time.unixMs();
+      item.updated_time = timeNow;
+      item.created_time = timeNow;
+      item.user_updated_time = timeNow;
+      item.user_created_time = timeNow;
+    });
 
     await itemUploader.preUploadItems(locals);
 
