@@ -7,6 +7,28 @@ import { serializeForSync, setE2EEnabled } from "../E2E";
 
 // Override some Joplin classes in order to function without SQLite
 export function loadClasses() {
+  Resource.fieldNames = (withPrefix: boolean = false) => {
+    return [
+      "id",
+      "mime",
+      "file_extension",
+      "title",
+      "filename",
+      "created_time",
+      "updated_time",
+      "encryption_blob_encrypted",
+      "encryption_applied",
+      "size",
+      "share_id",
+      "is_shared",
+      "blob_updated_time",
+      "ocr_text",
+      "ocr_status",
+      "ocr_details",
+      "ocr_error",
+      "encryption_cipher_text",
+    ];
+  };
   Note.fieldNames = (withPrefix: boolean = false) => {
     return [
       "id",

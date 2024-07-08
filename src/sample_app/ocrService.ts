@@ -1,12 +1,8 @@
-import OcrTesseractDriver from "@joplin/lib/services/ocr/drivers/OcrDriverTesseract";
 import { FileSystemSyncTarget } from "../SyncTarget/FileSystemSyncTarget";
-import { createWorker } from "tesseract.js";
 import {
   ResourceEntity,
   ResourceOcrStatus,
 } from "@joplin/lib/services/database/types";
-import Resource from "@joplin/lib/models/Resource";
-import filterOcrText from "@joplin/lib/services/ocr/utils/filterOcrText";
 import time from "../helpers/time";
 
 const getResourcePath = (syncPath: string, id: string) => {
@@ -45,38 +41,53 @@ export async function OCRService() {
       context: { timestamp: lastSync },
     });
     if (!itemsStat.items.length) return console.log("No new items found");
-    console.log("Found new items: ", itemsStat.items);
 
-    for (let item of itemsStat.items) {
-      // is resource
-      if (item.type_ !== 4) {
-        console.log("Not a resource, skipping");
+    for (let itemStat of itemsStat.items) {
+      let item = null;
+      try {
+        // quick check if item is resource
+        item = await syncer.getItem({
+          path: itemStat.path,
+          unserializeItem: true,
+        });
+        // is resource
+        if (item.type_ !== 4) {
+          console.log("Not a resource, skipping");
+          item = null;
+          continue;
+        }
+      } catch (err) {
+        // skip if error
+        console.log(
+          "Error processing item: ",
+          err.message,
+          ", Processing next item"
+        );
         continue;
       }
-      let tries = 0;
 
-      while (true) {
-        if (tries >= 3) break;
-        tries++;
+      if (!item) continue;
 
-        // mimicking download action
-        const resourcePath = getResourcePath(syncPath, item.id);
+      console.log("Is resource, Processing item: ", item.id);
+      // mimicking download action
+      // const resourcePath = getResourcePath(syncPath, item.id);
 
-        //init ocr
-        const ocrTesseract = new OcrTesseractDriver({ createWorker });
-        const result = await ocrTesseract.recognize("en", resourcePath);
+      //init ocr and scan
+      // const ocr = new OCRService();
+      // const result = await ocr.scan(resourcePath);
 
-        // update to new
-        const toSave: ResourceEntity = {
-          id: item.id,
-        };
+      // update to new
+      const toSave: ResourceEntity = {
+        id: item.id,
+      };
 
-        toSave.ocr_status = ResourceOcrStatus.Done;
-        toSave.ocr_text = filterOcrText(result.text);
-        toSave.ocr_details = Resource.serializeOcrDetails(result.lines);
-        toSave.ocr_error = "";
+      toSave.ocr_status = ResourceOcrStatus.Done;
+      toSave.ocr_text = "Processed ocr text"; // result.text;
+      toSave.ocr_details = "Processed ocr details"; // result.details;
+      toSave.ocr_error = "";
 
-        // push to remote
+      // push to remote
+      try {
         const updateResult = await syncer.updateItem({
           item: toSave,
           lastSync,
@@ -87,9 +98,11 @@ export async function OCRService() {
           break;
         } else {
           // update to newer timestamp and retry
-          lastSync = updateResult.remoteItem?.updated_time;
+          lastSync = updateResult.newSyncTime as number;
           console.log("Update conflicted, try retrieveing a newer timestamp");
         }
+      } catch (err) {
+        console.log("Unknown error updating item: ", err.message);
       }
     }
   }, pollInterval * 1000);
