@@ -811,8 +811,7 @@ export default class Synchronizer {
     if (options.id) {
       // id is prioritized
       item = await this.apiCall("get", BaseItem.systemPath(options.id));
-    }
-    if (options.path) {
+    } else if (options.path) {
       item = await this.apiCall("get", options.path);
     }
 
@@ -935,7 +934,7 @@ export default class Synchronizer {
         id: itemId,
         unserializeItem: true,
       });
-      if (!remoteItem) throw new Error("Item not found");
+      if (!remoteItem) throw new Error("Item not found: " + itemId);
 
       // check for conflicts
       if (remoteItem.updated_time > lastSync)
