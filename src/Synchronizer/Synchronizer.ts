@@ -892,7 +892,7 @@ export default class Synchronizer {
 
     // const activeMasterKeyId = mergeMasterKey(remoteInfo, options.E2E)
 
-    // 3. ENABLE/DISABLE E2E 
+    // 3. ENABLE/DISABLE E2E
 
     const previousE2EE: boolean = !!options.E2E.e2ee;
     if (newE2EInfo.e2ee !== previousE2EE) {
@@ -1118,7 +1118,8 @@ export default class Synchronizer {
       item.user_created_time = timeNow;
     });
 
-    await itemUploader.preUploadItems(locals);
+    // TODO: preupload causing item to exists
+    // await itemUploader.preUploadItems(locals);
 
     for (let i = 0; i < locals.length; i++) {
       let local = locals[i];
