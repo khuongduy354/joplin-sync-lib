@@ -1,9 +1,6 @@
-import * as fs from "fs-extra";
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { FileApi } from "../FileApi/FileApi";
-import { FileSystemSyncTarget } from "../SyncTarget/FileSystemSyncTarget";
 import { MemorySyncTarget } from "../SyncTarget/MemorySyncTarget";
-import SyncTargetRegistry from "@joplin/lib/SyncTargetRegistry";
 import FileApiDriverMemory from "../FileApi/Driver/FileApiMemoryDriver";
 import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
 
@@ -36,58 +33,6 @@ async function initFileApi() {
 function fileApi() {
   return fileApis_[syncTargetId_];
 }
-
-// async function setupDatabase(id: number = null, options: any = null) {
-//   options = { keychainEnabled: false, ...options };
-
-//   if (id === null) id = currentClient_;
-
-//   Setting.cancelScheduleSave();
-
-//   // Note that this was changed from `Setting.cache_ = []` to `await
-//   // Setting.reset()` during the TypeScript conversion. Normally this is
-//   // more correct but something to keep in mind anyway in case there are
-//   // some strange async issue related to settings when the tests are
-//   // running.
-//   await Setting.reset();
-
-//   Setting.setConstant("profileDir", rootProfileDir);
-//   Setting.setConstant("rootProfileDir", rootProfileDir);
-//   Setting.setConstant("isSubProfile", false);
-
-//   if (databases_[id]) {
-//     BaseModel.setDb(databases_[id]);
-//     await clearDatabase(id);
-//     await loadKeychainServiceAndSettings(
-//       options.keychainEnabled
-//         ? KeychainServiceDriver
-//         : KeychainServiceDriverDummy
-//     );
-//     Setting.setValue("sync.target", syncTargetId());
-//     return;
-//   }
-
-//   const filePath = `${dataDir}/test-${id}.sqlite`;
-
-//   try {
-//     await fs.unlink(filePath);
-//   } catch (error) {
-//     // Don't care if the file doesn't exist
-//   }
-
-//   databases_[id] = new JoplinDatabase(new DatabaseDriverNode());
-//   databases_[id].setLogger(dbLogger);
-//   await databases_[id].open({ name: filePath });
-
-//   BaseModel.setDb(databases_[id]);
-//   await clearSettingFile(id);
-//   await loadKeychainServiceAndSettings(
-//     options.keychainEnabled ? KeychainServiceDriver : KeychainServiceDriverDummy
-//   );
-
-//   reg.setDb(databases_[id]);
-//   Setting.setValue("sync.target", syncTargetId());
-// }
 
 async function setupDatabaseAndSynchronizer(id: number, options: any = null) {
   if (id === null) id = currentClient_;

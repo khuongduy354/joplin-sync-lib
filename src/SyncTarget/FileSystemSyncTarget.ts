@@ -3,7 +3,6 @@ import { FileApi } from "../FileApi/FileApi";
 import FileApiDriverLocal from "../FileApi/Driver/FsDriver/file-api-driver-local";
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { AppType } from "@joplin/lib/models/Setting";
-import { fetchSyncInfo } from "../Synchronizer/syncInfoUtils";
 
 export class FileSystemSyncTarget extends BaseSyncTarget {
   public static id() {

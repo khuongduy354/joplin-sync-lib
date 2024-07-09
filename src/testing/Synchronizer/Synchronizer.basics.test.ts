@@ -5,7 +5,7 @@ import {
   synchronizer,
 } from "../test-utils";
 import time from "../../helpers/time";
-import { loadClasses } from "../../helpers/main_helper";
+import { loadClasses } from "../../helpers/item";
 
 describe("Synchronizer.basics", () => {
   beforeEach(async () => {
