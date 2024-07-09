@@ -27,6 +27,7 @@ import { createUUID } from "../helpers/item";
 import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
 import TaskQueue from "@joplin/lib/TaskQueue";
 import { fullPathForSyncUpload, setE2EEnabled } from "../E2E";
+import { generateKeyPair } from "@joplin/lib/services/e2ee/ppk";
 
 type UploadResponse = {
   createdIds: string[];
@@ -823,7 +824,7 @@ export default class Synchronizer {
     return item;
   }
 
-  public async verifySyncInfo() {
+  public async verifySyncInfo(options: any = {}) {
     try {
       await this.api().initialize();
       this.api().setTempDirName(Dirnames.Temp);
@@ -855,69 +856,56 @@ export default class Synchronizer {
         `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
       );
 
-    const ppk = remoteInfo.ppk;
+    // options = {
+    //   E2E: {
+    //     ppk:,
+    //     e2ee: ,
+    //     masterPassword: ,
+    //     activeMasterKeyId: ,
+    //   }
+    // }
 
-    // TODO: handle ppk
-    if (ppk) {
-      setE2EEnabled(true);
-
-      // if (newInfo.e2ee) {
-      //   const mk = getActiveMasterKey(newInfo);
-      //   await setupAndEnableEncryption(this.encryptionService(), mk);
-      // } else {
-      //   await setupAndDisableEncryption(this.encryptionService());
-      // }
+    // ===================== E2E =====================
+    //     1. INIT LOCAL E2E INFO
+    // PPK
+    let localE2EInfo = options.E2E || {};
+    if (remoteInfo.ppk || options.E2E.ppk) {
+      localE2EInfo.ppk = options.E2E.ppk;
+    } else if (options.E2E.masterPassword) {
+      // generate from password
+      localE2EInfo.ppk = await generateKeyPair(
+        this.encryptionService(),
+        options.E2E.masterPassword
+      );
     }
 
-    // if (!syncInfoEquals(localInfo, remoteInfo)) {
-    //   // if (syncTargetIsNew && localInfo.activeMasterKeyId) {
-    //   //   localInfo = setMasterKeyHasBeenUsed(
-    //   //     localInfo,
-    //   //     localInfo.activeMasterKeyId
-    //   //   );
-    //   // }
+    // 2. MERGE KEYS FROM LOCAL AND REMOTE INFOs
 
-    //   // console.info('LOCAL', localInfo);
-    //   // console.info('REMOTE', remoteInfo);
+    // merge infos
+    // in normal Joplin application, we merge to whatever newer, however in Sync API,
+    // local is not allowed to set a new one, so all data depends on remote
+    let newE2EInfo = { e2ee: remoteInfo.e2ee, ppk: remoteInfo.ppk };
 
-    //   let newInfo = mergeSyncInfos(localInfo, remoteInfo);
-    //   if (newInfo.activeMasterKeyId)
-    //     newInfo = setMasterKeyHasBeenUsed(newInfo, newInfo.activeMasterKeyId);
-    //   const previousE2EE = localInfo.e2ee;
-    //   logger.info(
-    //     "Sync target info differs between local and remote - merging infos: ",
-    //     newInfo.toObject()
-    //   );
+    // merge master key
+    /// we dont need this, since this Sync API cannot enable encryption, therefore, there'll be no extra keys problem, remote key is the default key.
+    // if user provides a different key we notify it  as the wrong one
 
-    //   await this.lockHandler().acquireLock(
-    //     LockType.Exclusive,
-    //     this.lockClientType(),
-    //     this.clientId_,
-    //     { clearExistingSyncLocksFromTheSameClient: true }
-    //   );
-    //   await uploadSyncInfo(this.api(), newInfo);
-    //   await saveLocalSyncInfo(newInfo);
-    //   await this.lockHandler().releaseLock(
-    //     LockType.Exclusive,
-    //     this.lockClientType(),
-    //     this.clientId_
-    //   );
+    // const activeMasterKeyId = mergeMasterKey(remoteInfo, options.E2E)
 
-    //   // console.info('NEW', newInfo);
+    // 3. ENABLE/DISABLE E2E 
 
-    //   if (newInfo.e2ee !== previousE2EE) {
-    //     if (newInfo.e2ee) {
-    //       const mk = getActiveMasterKey(newInfo);
-    //       await setupAndEnableEncryption(this.encryptionService(), mk);
-    //     } else {
-    //       await setupAndDisableEncryption(this.encryptionService());
-    //     }
-    //   }
-    // } else {
-    //   // Set it to remote anyway so that timestamps are the same
-    //   // Note: that's probably not needed anymore?
-    //   // await uploadSyncInfo(this.api(), remoteInfo);
-    // }
+    const previousE2EE: boolean = !!options.E2E.e2ee;
+    if (newE2EInfo.e2ee !== previousE2EE) {
+      if (newE2EInfo.e2ee) {
+        //enable
+      } else {
+        //disable
+      }
+    }
+    // it should return new local sync info
+    return {
+      newE2EInfo,
+    };
   }
 
   public async updateItem(options: any = null) {
