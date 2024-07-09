@@ -1,7 +1,12 @@
 import BaseModel from "@joplin/lib/BaseModel";
 import BaseItem from "@joplin/lib/models/BaseItem";
+import Resource from "@joplin/lib/models/Resource";
 import moment from "moment";
 import { v4 } from "uuid";
+import { serializeForSync } from "../E2E";
+import Note from "@joplin/lib/models/Note";
+
+// Providing functions to work with Joplin Models Structure
 
 export function createUUID() {
   return v4().replace(/-/g, "");
@@ -47,11 +52,6 @@ export async function unserializeWithoutSQLite(content: string) {
 
   const ItemClass = BaseItem.itemClass(output.type_);
   output = ItemClass.removeUnknownFields(output);
-
-  // for (const n in output) {
-  //   if (!output.hasOwnProperty(n)) continue;
-  //   output[n] = await this.unserialize_format(output.type_, n, output[n]);
-  // }
 
   return output;
 }
@@ -136,4 +136,73 @@ export async function serializeModel(item: any, shownKeys: any[] = null) {
   if (output.props.length) temp.push(output.props.join("\n"));
 
   return temp.join("\n\n");
+}
+
+// Override some Joplin classes in order to function without SQLite
+export function loadClasses() {
+  Resource.fieldNames = (withPrefix: boolean = false) => {
+    return [
+      "id",
+      "mime",
+      "file_extension",
+      "title",
+      "filename",
+      "created_time",
+      "updated_time",
+      "encryption_blob_encrypted",
+      "encryption_applied",
+      "size",
+      "share_id",
+      "is_shared",
+      "blob_updated_time",
+      "ocr_text",
+      "ocr_status",
+      "ocr_details",
+      "ocr_error",
+      "encryption_cipher_text",
+    ];
+  };
+  Note.fieldNames = (withPrefix: boolean = false) => {
+    return [
+      "id",
+      "title",
+      "body",
+      "created_time",
+      "updated_time",
+      "user_updated_time",
+      "user_created_time",
+      "encryption_cipher_text",
+      "encryption_applied",
+      "markup_language",
+      "is_shared",
+      "source",
+      "source_application",
+      "application_data",
+      "order",
+      "latitude",
+      "longitude",
+      "altitude",
+      "author",
+      "source_url",
+      "is_todo",
+      "todo_due",
+      "todo_completed",
+      "is_conflict",
+      "user_data",
+      "deleted_time",
+      "type_",
+      "parent_id",
+      "is_conflict",
+      "share_id",
+      "conflict_original_id",
+      "master_key_id",
+    ];
+  };
+  // override some classes
+  BaseItem.serialize = serializeModel;
+  BaseItem.serializeForSync = serializeForSync;
+  BaseItem.unserialize = unserializeWithoutSQLite;
+
+  BaseItem.loadClass("Note", Note);
+  BaseItem.loadClass("Resource", Resource);
 }

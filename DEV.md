@@ -5,7 +5,7 @@
 
 # Files structure  
 - src/index.ts : entry file when running `npm run dev`
-- src/helpers/main_helper.ts : mainly loadClasses() use for overriding default methods in Joplin, must be run before using Sync API. (see src/index.ts and \*.test files)
+- src/helpers/item.ts : providing methods to override, default Joplin Item models, all overriding takes place in loadClasses(), which is called before every sync initialization
 - src/sample_app/ : example code for how to use the sync API   
 
 
@@ -13,7 +13,7 @@
 
 ```js 
 
-import { loadClasses } from "./helpers/main_helper"; 
+import { loadClasses } from "./helpers/item.ts"; 
 
 // run this before everything else
 loadClasses()  

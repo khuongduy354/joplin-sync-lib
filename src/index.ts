@@ -1,4 +1,4 @@
-import { loadClasses } from "./helpers/main_helper";
+import { loadClasses } from "./helpers/item";
 import { itemUpdaterDemo } from "./sample_app/itemUpdaterDemo";
 import { mailClient } from "./sample_app/mailClient";
 import { OCRService } from "./sample_app/ocrService";
