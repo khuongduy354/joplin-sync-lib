@@ -208,8 +208,7 @@ export default class MigrationHandler extends BaseService {
     }
   }
 
-  // TODO: this init version 3 in a sync target, later exposed API to init different versions (or not ?)
-  // TODO: this is use for testing
+  // this is use for testing
   public async initSyncInfo3() {
     const targetVersion = 3;
 

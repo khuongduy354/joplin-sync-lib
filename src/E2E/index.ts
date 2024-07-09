@@ -7,11 +7,10 @@ import {
 import EncryptionService from "@joplin/lib/services/e2ee/EncryptionService";
 import { MasterKeyEntity } from "@joplin/lib/services/e2ee/types";
 
-// TODO: class to handle
+// TODO: not for user to toggle on/off, but as an indication of whether encryption is enabled when interacting with remote
+// use along with LocalInfo to store state of running instance
 let e2eEnabled = false;
 let masterKeyId = null;
-
-// TODO: not for user to toggle on/off, but as an indication of whether encryption is enabled when interacting with remote
 export async function setupAndEnableEncryption(
   service: EncryptionService,
   masterKey: MasterKeyEntity = null,
@@ -32,7 +31,6 @@ export async function setupAndEnableEncryption(
   // setEncryptionEnabled(true, masterKey ? masterKey.id : null);
 
   if (masterPassword) {
-    // TODO: not sure if master password is needed, depend on use cases
     // Setting.setValue("encryption.masterPassword", masterPassword);
   }
 

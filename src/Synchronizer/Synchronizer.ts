@@ -26,7 +26,7 @@ import { parameters_ } from "../helpers/parameter";
 import { createUUID } from "../helpers/item";
 import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
 import TaskQueue from "@joplin/lib/TaskQueue";
-import { fullPathForSyncUpload, setE2EEnabled } from "../E2E";
+import { fullPathForSyncUpload } from "../E2E";
 
 type UploadResponse = {
   createdIds: string[];
@@ -67,8 +67,7 @@ export default class Synchronizer {
     this.db_ = db;
     this.api_ = api;
     this.appType_ = appType;
-    //TODO: change params
-    this.clientId_ = parameters_.test.id;
+    this.clientId_ = createUUID();
     this.onProgress_ = function () {};
     this.progressReport_ = {};
 
@@ -415,8 +414,11 @@ export default class Synchronizer {
 
   // options.context.timestamp should be input by user
   // leave empty == 0, means get all remote items
+  // options.limit = 50, means get 50 items per request
   public async getItemsMetadata(options: any = {}) {
-    //TODO: add option: filtering, pagination
+    let outputLimit = 50; // output limit, default to 50
+    if (typeof options.outputLimit === "number")
+      outputLimit = options.outputLimit;
 
     // retrieve remote results after timestamp
     const deltaResult: PaginatedList = await this.apiCall("delta", "", {
@@ -424,12 +426,8 @@ export default class Synchronizer {
       allLocalItemsIds: [], // TODO: handle delete operations
       wipeOutFailSafe: false,
       logger: console,
+      outputLimit,
     });
-
-    if (deltaResult.hasMore) {
-      // TODO: handle pagination here
-      // default limit is 50 items
-    }
 
     return deltaResult;
   }
@@ -460,9 +458,6 @@ export default class Synchronizer {
     );
 
     const remoteIds = remotes.map((r: any) => BaseItem.pathToId(r.path));
-
-    // TODO: need a way to provide local files
-    // const locals = await BaseItem.loadItemsByIds(remoteIds);
 
     for (const remote of remotes) {
       let needsToDownload = true;
@@ -510,7 +505,7 @@ export default class Synchronizer {
         const task = await this.downloadQueue_.waitForResult(path);
         if (task.error) throw task.error;
         if (!task.result) return null;
-        return await BaseItem.unserialize(task.result); //TODO: unserialize content here
+        return await BaseItem.unserialize(task.result);
       };
 
       const path = remote.path;
@@ -521,9 +516,8 @@ export default class Synchronizer {
     return result;
   }
 
-  // TODO: unimplemented
+  // TODO: unimplemented (low priority)
   public async applyDeltaToDb(options: any = {}, db: any) {
-    // TODO: current assumming only metadata so no need for this
     // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
     if (!options.deltaResult) {
       logger.warn("No delta result to download");
@@ -550,7 +544,6 @@ export default class Synchronizer {
 
       const remoteIds = remotes.map((r: any) => BaseItem.pathToId(r.path));
 
-      // TODO: need a way to provide local files
       // const locals = await BaseItem.loadItemsByIds(remoteIds);
 
       for (const remote of remotes) {
@@ -609,7 +602,7 @@ export default class Synchronizer {
         let ItemClass = null;
         let content = null;
 
-        // TODO: inject database to this step
+        // inject database to this step
         try {
           if (!local) {
             if (remote.isDeleted !== true) {
@@ -1023,12 +1016,13 @@ export default class Synchronizer {
     }
   }
 
-  public async createItems(options: any = null) {
+  public async createItems(options: any) {
     await this.verifySyncInfo();
-    if (!options) options = {};
+    if (!Array.isArray(options.items) || !options.items.length)
+      throw new Error("Items are required, and must be an array");
 
-    this.onProgress_ = options.onProgress ? options.onProgress : function () {};
-    this.progressReport_ = { errors: [] };
+    if (options.items.length > 10)
+      throw new Error("Maximum 10 items can be created at once");
 
     const lastContext = options.context ? options.context : {};
 
@@ -1117,7 +1111,6 @@ export default class Synchronizer {
       donePaths.push(path);
     };
 
-    // TODO: batch here to 10
     const locals = options.items as BaseItem[];
 
     // id generation
@@ -1129,8 +1122,6 @@ export default class Synchronizer {
       item.user_updated_time = timeNow;
       item.user_created_time = timeNow;
     });
-
-    await itemUploader.preUploadItems(locals);
 
     for (let i = 0; i < locals.length; i++) {
       let local = locals[i];
@@ -1155,38 +1146,17 @@ export default class Synchronizer {
 
       const remote: RemoteItem = await this.apiCall("stat", path);
       let action: SyncAction = null;
-      let itemIsReadOnly = false;
+      // let itemIsReadOnly = false;
       let reason = "";
-      let remoteContent = null;
-
-      const getConflictType = (conflictedItem: any) => {
-        if (conflictedItem.type_ === BaseModel.TYPE_NOTE)
-          return SyncAction.NoteConflict;
-        if (conflictedItem.type_ === BaseModel.TYPE_RESOURCE)
-          return SyncAction.ResourceConflict;
-        return SyncAction.ItemConflict;
-      };
-
-      // TODO: handle conflict here  (resource + note conflict)
+      // let remoteContent = null;
 
       if (remote) {
-        // action = SyncAction.ItemConflict
-        // reason = "remote item exists, can't create. ";
         logger.info("REMOTE EXIST: ", remote);
         throw new Error("Remote item exists, can't create. ");
       }
 
-      // remove this logic because
-      // upload item mean create it entirely new, not synced before
-      // if (!local.sync_time) {
       action = SyncAction.CreateRemote;
       reason = "Uploading items to remote";
-      // } else {
-      // Note or item was modified after having been deleted remotely
-      // "itemConflict" is for all the items except the notes, which are dealt with in a special way
-      // action = getConflictType(local);
-      // reason = "remote has been deleted, but local has changes";
-      // }
 
       // We no longer upload Master Keys however we keep them
       // in the database for extra safety. In a future
@@ -1194,7 +1164,7 @@ export default class Synchronizer {
       // works well, we can delete them.
       if (local.type_ === ModelType.MasterKey) action = null; // user should not add master key to upload list, this code is for safety check
 
-      // TODO: in case of resource fail this stills log
+      // in case of resource fail this stills log
       this.logSyncOperation(action, local, remote, reason);
 
       if (
@@ -1234,7 +1204,7 @@ export default class Synchronizer {
             );
           }
 
-          // TODO: this logic is ignore, assuming that we're creating a
+          // this logic is ignore, assuming that we're creating a
           // whole new blob + metadata to remote
 
           // We skip updating the blob if it hasn't
@@ -1308,7 +1278,7 @@ export default class Synchronizer {
           await itemUploader.serializeAndUploadItem(ItemClass, path, local);
         } catch (error) {
           if (error && error.code === "rejectedByTarget") {
-            // TODO: callback cannot upload item
+            // TODO: add to result list these cannot sync item
             // await handleCannotSyncItem(
             //   ItemClass,
             //   syncTargetId,
@@ -1317,6 +1287,13 @@ export default class Synchronizer {
             // );
             canSync = false;
           } else if (error && error.code === ErrorCode.IsReadOnly) {
+            const getConflictType = (conflictedItem: any) => {
+              if (conflictedItem.type_ === BaseModel.TYPE_NOTE)
+                return SyncAction.NoteConflict;
+              if (conflictedItem.type_ === BaseModel.TYPE_RESOURCE)
+                return SyncAction.ResourceConflict;
+              return SyncAction.ItemConflict;
+            };
             action = getConflictType(local);
             itemIsReadOnly = true;
             canSync = false;
@@ -1367,8 +1344,6 @@ export default class Synchronizer {
 
       completeItemProcessing(path, local.id as string);
     }
-
-    // TODO: after batched, check and break
 
     // if (!result.hasMore) break;
 

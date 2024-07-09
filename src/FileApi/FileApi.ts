@@ -4,6 +4,7 @@ import helper from "../helpers/misc";
 import { isHidden } from "@joplin/utils/path";
 import { Lock, LockClientType, LockType } from "../Synchronizer/Locks";
 import BaseItem from "@joplin/lib/models/BaseItem";
+import time from "../helpers/time";
 const Mutex = require("async-mutex").Mutex;
 
 export interface MultiPutItem {
@@ -38,7 +39,7 @@ export interface PaginatedList {
 }
 // eslint-disable-next-line @typescript-eslint/ban-types -- Old code before rule was applied
 async function tryAndRepeat(fn: Function, count: number) {
-  //TODO: implement try once for now
+  //implement try once, because this library works as a REST API
   let retryCount = 0;
 
   // Don't use internal fetch retry mechanim since we
@@ -75,6 +76,7 @@ export interface DeltaOptions {
   allItemIdsHandler(): Promise<string[]>;
   logger?: LoggerWrapper;
   wipeOutFailSafe: boolean;
+  outputLimit: number;
 }
 
 export enum GetOptionsTarget {
@@ -165,7 +167,7 @@ class FileApi {
     while (Date.now() - loopStartTime < 5000) {
       stat = await this.stat(tempFile);
       if (stat) break;
-      // await time.msleep(200); TODO: implement wait later
+      await time.msleep(200);
     }
 
     if (!stat)
@@ -499,7 +501,9 @@ async function basicDelta(
   getDirStatFn: Function,
   options: any
 ): Promise<PaginatedList> {
-  const outputLimit = 50;
+  let outputLimit = 50;
+  if (options.outputLimit) outputLimit = options.outputLimit;
+
   const itemIds = await options.allLocalItemsIds;
   if (!Array.isArray(itemIds))
     throw new Error("Delta API not supported - local IDs must be provided");
