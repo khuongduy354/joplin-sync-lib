@@ -4,6 +4,7 @@ import { logger } from "../helpers/logger";
 import fs from "fs-extra";
 import { AppType } from "@joplin/lib/models/Setting";
 import ItemUploader from "@joplin/lib/services/synchronizer/ItemUploader";
+import { sprintf } from "sprintf-js";
 import {
   Dirnames,
   SyncAction,
@@ -26,6 +27,13 @@ import { createUUID } from "../helpers/item";
 import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
 import TaskQueue from "@joplin/lib/TaskQueue";
 import { fullPathForSyncUpload } from "../E2E";
+import {
+  createItemsInput,
+  getItemInput,
+  getItemsInput,
+  getItemsMetadataInput,
+  updateItemInput,
+} from "../types/apiIO";
 
 export default class Synchronizer {
   public static verboseMode = true;
@@ -146,15 +154,6 @@ export default class Synchronizer {
     return this.resourceService_;
   }
 
-  public async waitForSyncToFinish() {
-    if (this.state() === "idle") return;
-
-    while (true) {
-      await time.sleep(1);
-      if (this.state() === "idle") return;
-    }
-  }
-
   private static reportHasErrors(report: any): boolean {
     return !!report && !!report.errors && !!report.errors.length;
   }
@@ -163,49 +162,6 @@ export default class Synchronizer {
     const duration = report.completedTime - report.startTime;
     if (duration > 1000) return `${Math.round(duration / 1000)}s`;
     return `${duration}ms`;
-  }
-
-  public static reportToLines(report: any) {
-    const lines = [];
-    if (report.createLocal)
-      lines.push(_("Created local items: %d.", report.createLocal));
-    if (report.updateLocal)
-      lines.push(_("Updated local items: %d.", report.updateLocal));
-    if (report.createRemote)
-      lines.push(_("Created remote items: %d.", report.createRemote));
-    if (report.updateRemote)
-      lines.push(_("Updated remote items: %d.", report.updateRemote));
-    if (report.deleteLocal)
-      lines.push(_("Deleted local items: %d.", report.deleteLocal));
-    if (report.deleteRemote)
-      lines.push(_("Deleted remote items: %d.", report.deleteRemote));
-    if (report.fetchingTotal && report.fetchingProcessed)
-      lines.push(
-        _(
-          "Fetched items: %d/%d.",
-          report.fetchingProcessed,
-          report.fetchingTotal
-        )
-      );
-    if (report.cancelling && !report.completedTime)
-      lines.push(_("Cancelling..."));
-    if (report.completedTime)
-      lines.push(
-        _(
-          "Completed: %s (%s)",
-          time.formatMsToLocal(report.completedTime),
-          this.completionTime(report)
-        )
-      );
-    if (this.reportHasErrors(report))
-      lines.push(
-        _(
-          "Last error: %s",
-          report.errors[report.errors.length - 1].toString().substr(0, 500)
-        )
-      );
-
-    return lines;
   }
 
   public logSyncOperation(
@@ -290,6 +246,7 @@ export default class Synchronizer {
   }
 
   public async cancel() {
+    // TODO:
     if (this.cancelling_ || this.state() === "idle") return null;
 
     // Stop queue but don't set it to null as it may be used to
@@ -324,20 +281,6 @@ export default class Synchronizer {
     }
   }
 
-  public static stateToLabel(state: string) {
-    if (state === "idle") return _("Idle");
-    if (state === "in_progress") return _("In progress");
-    return state;
-  }
-
-  public isFullSync(steps: string[]) {
-    return (
-      steps.includes("update_remote") &&
-      steps.includes("delete_remote") &&
-      steps.includes("delta")
-    );
-  }
-
   private async lockErrorStatus_() {
     const locks = await this.lockHandler().locks();
     const currentDate = await this.lockHandler().currentDate();
@@ -361,16 +304,6 @@ export default class Synchronizer {
     if (!hasActiveSyncLock) return "syncLockGone";
 
     return "";
-  }
-
-  private async setPpkIfNotExist(localInfo: SyncInfo, remoteInfo: SyncInfo) {
-    if (localInfo.ppk || remoteInfo.ppk) return localInfo;
-
-    const password = getMasterPassword(false);
-    if (!password) return localInfo;
-
-    localInfo.ppk = await generateKeyPair(this.encryptionService(), password);
-    return localInfo;
   }
 
   private async apiCall(fnName: string, ...args: any[]) {
@@ -401,7 +334,7 @@ export default class Synchronizer {
 
   // options.context.timestamp should be input by user
   // leave empty == 0, means get all remote items
-  // options.limit = 50, means get 50 items per request
+  // options.outputLimit = 50, means get 50 items per method call
   public async getItemsMetadata(options: any = {}) {
     let outputLimit = 50; // output limit, default to 50
     if (typeof options.outputLimit === "number")
@@ -419,7 +352,7 @@ export default class Synchronizer {
     return deltaResult;
   }
 
-  public async getItems(options: any = {}) {
+  public async getItems(options: getItemsInput = {}) {
     // TODO: current assumming only metadata so no need for this
     // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
     if (!options.deltaResult) {
@@ -504,13 +437,7 @@ export default class Synchronizer {
   }
 
   // GET single item based on path or id
-  public async getItem(
-    options: {
-      path?: string;
-      id?: string;
-      unserializeItem?: boolean;
-    } = { unserializeItem: false }
-  ) {
+  public async getItem(options: getItemInput = { unserializeItem: false }) {
     let item = null;
     if (options.id) {
       // id is prioritized
@@ -562,7 +489,7 @@ export default class Synchronizer {
     // }
   }
 
-  public async updateItem(options: any = null) {
+  public async updateItem(options: updateItemInput = null) {
     try {
       const { item, lastSync } = options;
       const itemId = item.id;
@@ -665,7 +592,8 @@ export default class Synchronizer {
     }
   }
 
-  public async createItems(options: any) {
+  // options.items = [BaseItem]
+  public async createItems(options: createItemsInput) {
     // preparation step
     await this.verifySyncInfo();
     if (!Array.isArray(options.items) || !options.items.length)
@@ -769,7 +697,7 @@ export default class Synchronizer {
 
       const remote: RemoteItem = await this.apiCall("stat", path);
       let action: SyncAction = null;
-      // let itemIsReadOnly = false;
+      let itemIsReadOnly = false;
       let reason = "";
       // let remoteContent = null;
 
