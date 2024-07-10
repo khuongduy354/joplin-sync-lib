@@ -1,8 +1,8 @@
 import { PaginatedList } from "../FileApi/FileApi";
 
 export type getItemsMetadataInput = {
-  context?: {
-    timestamp: number; // in unixMs
+  context: {
+    timestamp?: number; //unixMs
   };
   outputLimit?: number;
 };
@@ -11,7 +11,7 @@ export type getItemsMetadataOutput = PaginatedList;
 export type getItemInput = {
   path?: string;
   id?: string;
-  unserializeItem: boolean;
+  unserializeItem?: boolean;
 };
 export type getItemOutput = string | null | any;
 

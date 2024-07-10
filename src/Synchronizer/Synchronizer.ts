@@ -336,6 +336,41 @@ export default class Synchronizer {
     }
   }
 
+  public async verifySyncInfo() {
+    try {
+      await this.api().initialize();
+      this.api().setTempDirName(Dirnames.Temp);
+    } catch (error) {
+      throw error;
+    }
+
+    let remoteInfo = await fetchSyncInfo(this.api());
+    logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
+    // eventManager.emit(EventName.SessionEstablished);
+
+    let syncTargetIsNew = false;
+
+    if (!remoteInfo.version) {
+      throw new Error(
+        "No remote sync info file found. Please initialize sync target with client first."
+      );
+    }
+
+    logger.info("Sync target is already setup - checking it...");
+
+    if (remoteInfo.version !== 3)
+      throw new Error(
+        `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
+      );
+
+    const ppk = remoteInfo.ppk;
+
+    // TODO: handle ppk
+    // if (ppk) {
+    //   setE2EEnabled(true);
+    // }
+  }
+
   // ====================== Sync Library API ======================
 
   // options.context.timestamp should be input by user
@@ -359,7 +394,7 @@ export default class Synchronizer {
     return deltaResult;
   }
 
-  public async getItems(options: getItemsInput = {}) {
+  public async getItems(options: getItemsInput) {
     // TODO: current assumming only metadata so no need for this
     // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
     if (!options.deltaResult) {
@@ -463,49 +498,12 @@ export default class Synchronizer {
     return item;
   }
 
-  public async verifySyncInfo() {
-    try {
-      await this.api().initialize();
-      this.api().setTempDirName(Dirnames.Temp);
-    } catch (error) {
-      throw error;
-    }
-
-    let remoteInfo = await fetchSyncInfo(this.api());
-    logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
-    // eventManager.emit(EventName.SessionEstablished);
-
-    let syncTargetIsNew = false;
-
-    if (!remoteInfo.version) {
-      throw new Error(
-        "No remote sync info file found. Please initialize sync target with client first."
-      );
-    }
-
-    logger.info("Sync target is already setup - checking it...");
-
-    if (remoteInfo.version !== 3)
-      throw new Error(
-        `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
-      );
-
-    const ppk = remoteInfo.ppk;
-
-    // TODO: handle ppk
-    // if (ppk) {
-    //   setE2EEnabled(true);
-    // }
-  }
-
   public async updateItem(options: updateItemInput): Promise<updateItemOutput> {
     try {
+      await this.verifySyncInfo();
+
       const { item, lastSync } = options;
       const itemId = item.id;
-
-      if (!itemId) throw new Error("Item id is required");
-      if (!lastSync) throw new Error("Last modified date is required");
-      await this.verifySyncInfo();
 
       // Update a single item, provided a last modified date, if last modified is not matched, it will aborted and a pull request is required
       let remoteItem = await this.getItem({
