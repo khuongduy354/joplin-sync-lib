@@ -23,8 +23,7 @@ export default class FileApiDriverMemory {
   }
 
   public get supportsMultiPut() {
-    // TODO: currently disable multiput for testing purpose
-    return false;
+    return true;
   }
 
   public get supportsAccurateTimestamp() {

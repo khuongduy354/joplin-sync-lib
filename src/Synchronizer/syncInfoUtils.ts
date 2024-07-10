@@ -1,10 +1,6 @@
 import Logger from "@joplin/utils/Logger";
 import { FileApi } from "../FileApi/FileApi";
 import JoplinDatabase from "@joplin/lib/JoplinDatabase";
-import Setting from "@joplin/lib/models/Setting";
-// import { State } from "../../reducer";
-// import { PublicPrivateKeyPair } from "../e2ee/ppk";
-// import { MasterKeyEntity } from "../e2ee/types";
 import { compareVersions } from "compare-versions";
 import JoplinError from "@joplin/lib/JoplinError";
 import { ErrorCode } from "@joplin/lib/errors";
@@ -409,9 +405,7 @@ export class SyncInfo {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
     (this as any)[`${name}_`].updatedTime = timestamp;
   }
-}
-
-// ---------------------------------------------------------
+} // ---------------------------------------------------------
 // Shortcuts to simplify the refactoring
 // ---------------------------------------------------------
 

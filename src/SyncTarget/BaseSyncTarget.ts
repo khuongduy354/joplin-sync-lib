@@ -1,6 +1,5 @@
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { logger } from "../helpers/logger";
-import { singleton } from "../singleton";
 
 export interface CheckConfigResult {
   ok: boolean;
@@ -114,13 +113,13 @@ export abstract class BaseSyncTarget {
     if (this.initState_ === "started") {
       // Synchronizer is already being initialized, so wait here till it's done.
       return new Promise((resolve, reject) => {
-        const iid = singleton.setInterval(() => {
+        const iid = setInterval(() => {
           if (this.initState_ === "ready") {
-            singleton.clearInterval(iid);
+            clearInterval(iid);
             resolve(this.synchronizer_);
           }
           if (this.initState_ === "error") {
-            singleton.clearInterval(iid);
+            clearInterval(iid);
             reject(new Error("Could not initialise synchroniser"));
           }
         }, 1000);
@@ -131,9 +130,6 @@ export abstract class BaseSyncTarget {
       try {
         this.synchronizer_ = await this.initSynchronizer();
         this.synchronizer_.setLogger(this.logger());
-        // this.synchronizer_.setEncryptionService(EncryptionService.instance());
-        // this.synchronizer_.setResourceService(ResourceService.instance());
-        // this.synchronizer_.setShareService(ShareService.instance());
         this.synchronizer_.dispatch = BaseSyncTarget.dispatch;
         this.initState_ = "ready";
         return this.synchronizer_;

@@ -5,7 +5,7 @@ import {
   synchronizer,
 } from "../test-utils";
 import time from "../../helpers/time";
-import { loadClasses } from "../../helpers/main_helper";
+import { loadClasses } from "../../helpers/item";
 
 describe("Synchronizer.basics", () => {
   beforeEach(async () => {
@@ -38,10 +38,10 @@ describe("Synchronizer.basics", () => {
     const res = await syncer.createItems({ items: [note] });
 
     // get by id
-    let remote = await syncer.getItem({ id: res.createdIds[0] });
+    let remote = await syncer.getItem({ id: res.createdItems[0].id });
 
     // get by path
-    const path = BaseItem.systemPath(res.createdIds[0]);
+    const path = BaseItem.systemPath(res.createdItems[0].id);
     const remoteByPath = await syncer.getItem({ path });
 
     // both must yield same result
@@ -52,7 +52,7 @@ describe("Synchronizer.basics", () => {
     remote = await BaseItem.unserialize(remote);
     expect(remote.title).toBe(note.title);
     expect(remote.body).toBe(note.body);
-    expect(remote.id).toBe(res.createdIds[0]);
+    expect(remote.id).toBe(res.createdItems[0].id);
   });
 
   it("should update remote items", async () => {
@@ -69,14 +69,14 @@ describe("Synchronizer.basics", () => {
 
     const note2 = {
       type_: 1,
-      id: res.createdIds[0],
+      id: res.createdItems[0].id,
       title: "hello 2",
       parent_id: "parent id",
       body: "body after update",
     };
 
     const item = await syncer.getItem({
-      id: res.createdIds[0],
+      id: res.createdItems[0].id,
       unserializeItem: true,
     });
     console.log("item to be updated: ", item);
@@ -103,7 +103,7 @@ describe("Synchronizer.basics", () => {
     const res = await syncer.createItems({ items: [note] });
 
     // pull and check if the created is included
-    const expectedPath = res.createdIds[0] + ".md";
+    const expectedPath = res.createdItems[0].id + ".md";
     const allItems = await syncer.getItemsMetadata();
 
     // first file should always be info.json
@@ -136,7 +136,7 @@ describe("Synchronizer.basics", () => {
     expect(allItems.items.length).toBe(3);
 
     // pull a file that is 10 minutes ahead of now
-    const timestamp = Date.now() + 10 * 60 * 1000;
+    const timestamp = time.unixMs() + 10 * 60 * 1000;
     allItems = await syncer.getItemsMetadata({ context: { timestamp } });
 
     expect(allItems.items.length).toBe(0); // no new items should be pulled

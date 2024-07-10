@@ -41,7 +41,7 @@ function noteBuilder(title = "", body = "") {
     parent_id: "1b0663e319074c0cbd966678dabde0b8",
     title,
     body,
-    // TODO: create in upload process
+    // these will be generated during create process
     // created_time: "2024-05-20T10:59:36.204Z",
     // updated_time: "2024-05-20T10:59:37.322Z",
     // user_created_time: "2024-05-20T10:59:36.204Z",

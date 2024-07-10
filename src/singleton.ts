@@ -15,6 +15,9 @@ abstract class AbstractSingleTon {
   abstract db(): any;
 }
 
+// TODO: clear up singleton
+// Currently, only .fsDriver() is used, most other method isn't needed
+// Sync API use Nodejs, so many methods are supported already.
 export class SingleTon extends AbstractSingleTon {
   protected fsDriver_: FsDriverNode = null;
   protected _db: any = null;
