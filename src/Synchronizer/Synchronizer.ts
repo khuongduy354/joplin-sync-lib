@@ -29,10 +29,14 @@ import TaskQueue from "@joplin/lib/TaskQueue";
 import { fullPathForSyncUpload } from "../E2E";
 import {
   createItemsInput,
+  createItemsOutput,
   getItemInput,
+  getItemOutput,
   getItemsInput,
   getItemsMetadataInput,
+  getItemsMetadataOutput,
   updateItemInput,
+  updateItemOutput,
 } from "../types/apiIO";
 
 export default class Synchronizer {
@@ -332,21 +336,24 @@ export default class Synchronizer {
     }
   }
 
+  // ====================== Sync Library API ======================
+
   // options.context.timestamp should be input by user
   // leave empty == 0, means get all remote items
   // options.outputLimit = 50, means get 50 items per method call
-  public async getItemsMetadata(options: any = {}) {
-    let outputLimit = 50; // output limit, default to 50
-    if (typeof options.outputLimit === "number")
-      outputLimit = options.outputLimit;
-
+  public async getItemsMetadata(
+    options: getItemsMetadataInput = {
+      context: { timestamp: 0 },
+      outputLimit: 50,
+    }
+  ): Promise<getItemsMetadataOutput> {
     // retrieve remote results after timestamp
     const deltaResult: PaginatedList = await this.apiCall("delta", "", {
       context: options.context,
       allLocalItemsIds: [], // TODO: handle delete operations
       wipeOutFailSafe: false,
       logger: console,
-      outputLimit,
+      outputLimit: options.outputLimit,
     });
 
     return deltaResult;
@@ -437,7 +444,9 @@ export default class Synchronizer {
   }
 
   // GET single item based on path or id
-  public async getItem(options: getItemInput = { unserializeItem: false }) {
+  public async getItem(
+    options: getItemInput = { unserializeItem: false }
+  ): Promise<getItemOutput> {
     let item = null;
     if (options.id) {
       // id is prioritized
@@ -489,7 +498,7 @@ export default class Synchronizer {
     // }
   }
 
-  public async updateItem(options: updateItemInput = null) {
+  public async updateItem(options: updateItemInput): Promise<updateItemOutput> {
     try {
       const { item, lastSync } = options;
       const itemId = item.id;
@@ -510,7 +519,7 @@ export default class Synchronizer {
         return {
           status: "conflicted",
           message:
-            "Both local and remote has been changed since last sync, a conflict may have occured, please resolve it first.",
+            "Both local and remote has been changed since last sync, a conflict may have occured, please resolve it first and provide a new timestamp.",
           remoteItem,
         };
 
@@ -518,7 +527,7 @@ export default class Synchronizer {
         return {
           status: "inaccurate timestamp",
           message:
-            "Remote item hasn't synced initial with this client, or timestamp is incorrect, please pull changes and resolve",
+            "Remote item hasn't synced initially with this client, or timestamp is incorrect, please pull changes, resolve, and provide a new timestamp",
         };
       }
 
@@ -592,8 +601,9 @@ export default class Synchronizer {
     }
   }
 
-  // options.items = [BaseItem]
-  public async createItems(options: createItemsInput) {
+  public async createItems(
+    options: createItemsInput
+  ): Promise<createItemsOutput> {
     // preparation step
     await this.verifySyncInfo();
     if (!Array.isArray(options.items) || !options.items.length)
@@ -655,10 +665,11 @@ export default class Synchronizer {
     // UPLOAD PROCESS
 
     const donePaths: string[] = [];
-    const idLists: string[] = [];
+    const doneItems: any[] = [];
+    const failedItems: any[] = [];
 
-    const completeItemProcessing = (path: string, id: string) => {
-      idLists.push(id);
+    const completeItemProcessing = (path: string, item: any) => {
+      doneItems.push(item);
       donePaths.push(path);
     };
 
@@ -790,33 +801,27 @@ export default class Synchronizer {
         try {
           await itemUploader.serializeAndUploadItem(ItemClass, path, local);
         } catch (error) {
+          failedItems.push({ item: local, error });
           if (error && error.code === "rejectedByTarget") {
-            // TODO: add to result list these cannot sync item
-            // await handleCannotSyncItem(
-            //   ItemClass,
-            //   syncTargetId,
-            //   local,
-            //   error.message
-            // );
             canSync = false;
           } else if (error && error.code === ErrorCode.IsReadOnly) {
-            const getConflictType = (conflictedItem: any) => {
-              if (conflictedItem.type_ === BaseModel.TYPE_NOTE)
-                return SyncAction.NoteConflict;
-              if (conflictedItem.type_ === BaseModel.TYPE_RESOURCE)
-                return SyncAction.ResourceConflict;
-              return SyncAction.ItemConflict;
-            };
-            action = getConflictType(local);
-            itemIsReadOnly = true;
-            canSync = false;
+            // const getConflictType = (conflictedItem: any) => {
+            //   if (conflictedItem.type_ === BaseModel.TYPE_NOTE)
+            //     return SyncAction.NoteConflict;
+            //   if (conflictedItem.type_ === BaseModel.TYPE_RESOURCE)
+            //     return SyncAction.ResourceConflict;
+            //   return SyncAction.ItemConflict;
+            // };
+            // action = getConflictType(local);
+            // itemIsReadOnly = true;
+            // canSync = false;
           } else {
             throw error;
           }
         }
       }
 
-      completeItemProcessing(path, local.id as string);
+      completeItemProcessing(path, local);
     }
 
     if (syncLock) {
@@ -857,7 +862,7 @@ export default class Synchronizer {
 
     if (errorToThrow) throw errorToThrow;
 
-    return { createdIds: idLists };
+    return { createdItems: doneItems, failedItems };
   }
   catch(err) {
     throw err;
