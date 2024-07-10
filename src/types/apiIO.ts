@@ -1,3 +1,4 @@
+import { PublicPrivateKeyPair } from "@joplin/lib/services/e2ee/ppk";
 import { PaginatedList } from "../FileApi/FileApi";
 
 export type getItemsMetadataInput = {
@@ -40,4 +41,17 @@ export type getItemsInput = {
   newItem?: any;
   oldItem?: any;
   newSyncTime?: number; // updated timestamp
+};
+
+export type verifySyncInfoInput = {
+  E2E: {
+    ppk?: PublicPrivateKeyPair;
+    e2ee: boolean;
+  };
+};
+
+export type verifySynInfoOutput = {
+  status: "success" | "aborted";
+  message: string;
+  remoteSyncInfo?: any;
 };

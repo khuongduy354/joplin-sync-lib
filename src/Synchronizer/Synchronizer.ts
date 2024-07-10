@@ -37,7 +37,9 @@ import {
   getItemsMetadataOutput,
   updateItemInput,
   updateItemOutput,
+  verifySyncInfoInput,
 } from "../types/apiIO";
+import { generateKeyPair } from "@joplin/lib/services/e2ee/ppk";
 
 export default class Synchronizer {
   public static verboseMode = true;
@@ -335,8 +337,7 @@ export default class Synchronizer {
       }
     }
   }
-
-  public async verifySyncInfo() {
+  public async verifySyncInfo(options: verifySyncInfoInput) {
     try {
       await this.api().initialize();
       this.api().setTempDirName(Dirnames.Temp);
@@ -346,9 +347,8 @@ export default class Synchronizer {
 
     let remoteInfo = await fetchSyncInfo(this.api());
     logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
-    // eventManager.emit(EventName.SessionEstablished);
 
-    let syncTargetIsNew = false;
+    // let syncTargetIsNew = false;
 
     if (!remoteInfo.version) {
       throw new Error(
@@ -363,12 +363,65 @@ export default class Synchronizer {
         `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
       );
 
-    const ppk = remoteInfo.ppk;
-
-    // TODO: handle ppk
-    // if (ppk) {
-    //   setE2EEnabled(true);
+    // options = {
+    //   E2E: {
+    //     ppk:,
+    //     e2ee: ,
+    //     activeMasterKeyId: ,
+    //   }
     // }
+
+    // ===================== E2E =====================
+
+    const previousE2EE = !!options.E2E.e2ee;
+
+    if (remoteInfo.e2ee !== previousE2EE) {
+      // There's a change in encryption setup between local and remote
+      logger.warn("Encryption mismatched changed between local and remote");
+      return {
+        status: "aborted",
+        message:
+          "There's a change in encryption, please setup your client again to match the remote",
+        remoteInfo, // use this to reconfigure client
+      };
+    } else {
+      // There's no change both sides
+
+      if (!remoteInfo.e2ee) {
+        // both disable E2E
+        // set encryption to disable
+        setupEncryption(false);
+        logger.info(
+          "Both client and remote disabled E2E, disabling encryption..."
+        );
+        return {
+          status: "success",
+          message: "Sync Info verified and disabled encryption",
+        };
+      } else {
+        // both enable E2E, check if they have the same PPK
+        if (remoteInfo.ppk.id !== options.E2E.ppk.id) {
+          logger.warn("Encryption mismatched changed between local and remote");
+          return {
+            status: "aborted",
+            message:
+              "There's a change in encryption key (ppk), please setup your client again to match the remote",
+            remoteInfo,
+          };
+        }
+
+        // else enable encryption
+        logger.info(
+          "Both client and remote enabled E2E with matched ppk, enabling encryption..."
+        );
+        setupEncryption(true, remoteInfo.activeMasterKeyId);
+        return {
+          status: "success",
+          message: "Sync Info verified and enabled encryption",
+          remoteInfo,
+        };
+      }
+    }
   }
 
   // ====================== Sync Library API ======================
@@ -498,89 +551,6 @@ export default class Synchronizer {
     return item;
   }
 
-  public async verifySyncInfo(options: any = {}) {
-    try {
-      await this.api().initialize();
-      this.api().setTempDirName(Dirnames.Temp);
-    } catch (error) {
-      throw error;
-    }
-
-    let remoteInfo = await fetchSyncInfo(this.api());
-    logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
-    // eventManager.emit(EventName.SessionEstablished);
-
-    let syncTargetIsNew = false;
-
-    if (!remoteInfo.version) {
-      throw new Error(
-        "No remote sync info file found. Please initialize sync target with client first."
-      );
-
-      // logger.info("Sync target is new - setting it up...");
-      // await this.migrationHandler().upgrade(Setting.value("syncVersion"));
-      // remoteInfo = await fetchSyncInfo(this.api());
-      // syncTargetIsNew = true;
-    }
-
-    logger.info("Sync target is already setup - checking it...");
-
-    if (remoteInfo.version !== 3)
-      throw new Error(
-        `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
-      );
-
-    // options = {
-    //   E2E: {
-    //     ppk:,
-    //     e2ee: ,
-    //     masterPassword: ,
-    //     activeMasterKeyId: ,
-    //   }
-    // }
-
-    // ===================== E2E =====================
-    //     1. INIT LOCAL E2E INFO
-    // PPK
-    let localE2EInfo = options.E2E || {};
-    if (remoteInfo.ppk || options.E2E.ppk) {
-      localE2EInfo.ppk = options.E2E.ppk;
-    } else if (options.E2E.masterPassword) {
-      // generate from password
-      localE2EInfo.ppk = await generateKeyPair(
-        this.encryptionService(),
-        options.E2E.masterPassword
-      );
-    }
-
-    // 2. MERGE KEYS FROM LOCAL AND REMOTE INFOs
-
-    // merge infos
-    // in normal Joplin application, we merge to whatever newer, however in Sync API,
-    // local is not allowed to set a new one, so all data depends on remote
-    let newE2EInfo = { e2ee: remoteInfo.e2ee, ppk: remoteInfo.ppk };
-
-    // merge master key
-    /// we dont need this, since this Sync API cannot enable encryption, therefore, there'll be no extra keys problem, remote key is the default key.
-    // if user provides a different key we notify it  as the wrong one
-
-    // const activeMasterKeyId = mergeMasterKey(remoteInfo, options.E2E)
-
-    // 3. ENABLE/DISABLE E2E
-
-    const previousE2EE: boolean = !!options.E2E.e2ee;
-    if (newE2EInfo.e2ee !== previousE2EE) {
-      if (newE2EInfo.e2ee) {
-        //enable
-      } else {
-        //disable
-      }
-    }
-    // it should return new local sync info
-    return {
-      newE2EInfo,
-    };
-  }
   public async updateItem(options: updateItemInput): Promise<updateItemOutput> {
     try {
       await this.verifySyncInfo();

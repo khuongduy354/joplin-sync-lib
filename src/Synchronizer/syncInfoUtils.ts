@@ -4,6 +4,7 @@ import JoplinDatabase from "@joplin/lib/JoplinDatabase";
 import { compareVersions } from "compare-versions";
 import JoplinError from "@joplin/lib/JoplinError";
 import { ErrorCode } from "@joplin/lib/errors";
+import { PublicPrivateKeyPair } from "@joplin/lib/services/e2ee/ppk";
 const fastDeepEqual = require("fast-deep-equal");
 
 const logger = Logger.create("syncInfoUtils");
