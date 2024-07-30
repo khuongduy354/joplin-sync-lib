@@ -86,7 +86,7 @@ describe("Synchronizer.basics", () => {
       lastSync: item.updated_time,
     });
 
-    expect(res2.status).toBe("success");
+    expect(res2.status).toBe("succeeded");
     expect(res2.newItem.title).toBe(note2.title);
     expect(res2.newItem.body).toBe(note2.body);
   });
