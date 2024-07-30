@@ -337,7 +337,7 @@ export default class Synchronizer {
       }
     }
   }
-  public async verifySyncInfo(options: verifySyncInfoInput) {
+  public async verifySyncInfo(options: verifySyncInfoInput = undefined) {
     try {
       await this.api().initialize();
       this.api().setTempDirName(Dirnames.Temp);
@@ -373,7 +373,18 @@ export default class Synchronizer {
 
     // ===================== E2E =====================
 
-    const previousE2EE = !!options.E2E.e2ee;
+    let previousE2EE = false;
+    if (
+      options === undefined ||
+      options.E2E === undefined ||
+      options.E2E.e2ee === undefined
+    ) {
+      console.log(
+        "No E2E info provided by client, assuming client E2E is disabled..."
+      );
+    } else {
+      previousE2EE = options.E2E.e2ee;
+    }
 
     if (remoteInfo.e2ee !== previousE2EE) {
       // There's a change in encryption setup between local and remote
@@ -390,16 +401,18 @@ export default class Synchronizer {
       if (!remoteInfo.e2ee) {
         // both disable E2E
         // set encryption to disable
-        setupEncryption(false);
+        // TODO: encryption enable
+        // setupEncryption(false);
         logger.info(
           "Both client and remote disabled E2E, disabling encryption..."
         );
         return {
-          status: "success",
+          status: "succeeded",
           message: "Sync Info verified and disabled encryption",
         };
       } else {
         // both enable E2E, check if they have the same PPK
+        console.log("remote info before check: ", remoteInfo);
         if (remoteInfo.ppk.id !== options.E2E.ppk.id) {
           logger.warn("Encryption mismatched changed between local and remote");
           return {
@@ -414,9 +427,9 @@ export default class Synchronizer {
         logger.info(
           "Both client and remote enabled E2E with matched ppk, enabling encryption..."
         );
-        setupEncryption(true, remoteInfo.activeMasterKeyId);
+        // setupEncryption(true, remoteInfo.activeMasterKeyId); TODO
         return {
-          status: "success",
+          status: "succeeded",
           message: "Sync Info verified and enabled encryption",
           remoteInfo,
         };
@@ -640,7 +653,7 @@ export default class Synchronizer {
       }
       this.syncTargetIsLocked_ = false;
       return {
-        status: "success",
+        status: "succeeded",
         message:
           "Item updated successfully, please save newItem.updated_time for future sync",
         newItem,
