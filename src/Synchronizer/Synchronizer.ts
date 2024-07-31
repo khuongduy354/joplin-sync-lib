@@ -657,7 +657,9 @@ export default class Synchronizer {
     for (let i = 0; i < options.deleteItems.length; i++) {
       const item = options.deleteItems[i];
       const path = BaseItem.systemPath(item.id);
-      const isResource = item.item_type === BaseModel.TYPE_RESOURCE;
+      const isResource =
+        item.item_type === BaseModel.TYPE_RESOURCE ||
+        item.type_ === BaseModel.TYPE_RESOURCE;
 
       try {
         await this.apiCall("delete", path);

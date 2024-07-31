@@ -95,7 +95,7 @@ describe("Synchronizer.resource", () => {
 
     // delete the resource
     const res2 = await syncer.deleteItems({
-      deleteItems: [{ id: res.createdItems[0].id }],
+      deleteItems: [{ id: res.createdItems[0].id, type_: 4 }],
     });
 
     expect(res2.length).toBe(1);
@@ -104,8 +104,8 @@ describe("Synchronizer.resource", () => {
     // check if resource && blob is deleted
     remote = await syncer.getItem({ id: res.createdItems[0].id });
     resourcePath = resourceRemotePath(res.createdItems[0].id);
-    blob = await syncer.getItem({ path: resourcePath });
+    let blob2 = await syncer.getItem({ path: resourcePath });
     expect(!!remote).toBe(false);
-    expect(!!blob).toBe(false);
+    expect(!!blob2).toBe(false);
   });
 });
