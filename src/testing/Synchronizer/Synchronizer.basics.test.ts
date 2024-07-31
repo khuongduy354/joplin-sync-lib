@@ -141,4 +141,61 @@ describe("Synchronizer.basics", () => {
 
     expect(allItems.items.length).toBe(0); // no new items should be pulled
   });
+
+  it("should delete remote items", async () => {
+    // create 1 item
+    const note = {
+      type_: 1,
+      id: "asds",
+      title: "un",
+      parent_id: "parent id",
+      body: "body",
+    };
+
+    const syncer = synchronizer(1);
+    const res = await syncer.createItems({ items: [note] });
+
+    let remote = await syncer.getItem({ id: res.createdItems[0].id });
+    expect(!!remote).toBe(true);
+
+    // delete the item
+    const res2 = await syncer.deleteItems({
+      deleteItems: [{ id: res.createdItems[0].id }],
+    });
+
+    expect(res2.length).toBe(1);
+    expect(res2[0].status).toBe("deleted");
+
+    // check if the item is deleted
+    remote = await syncer.getItem({ id: res.createdItems[0].id });
+    expect(!!remote).toBe(false);
+  });
+
+  it("should pull multiple remote items", async () => {
+    const note = {
+      type_: 1,
+      id: "asds",
+      title: "un",
+      parent_id: "parent id",
+      body: "body",
+    };
+    let items = [];
+    for (let i = 0; i < 10; i++) {
+      const copy = { ...note };
+      copy.id = i.toString();
+
+      items.push(copy);
+    }
+
+    const syncer = synchronizer(1);
+    const res = await syncer.createItems({ items });
+
+    // get items by id
+    let remoteItems = await syncer.getItems({
+      ids: items.map((i) => i.id),
+      unserializeAll: true,
+    });
+    expect(remoteItems.length).toBe(10);
+    expect(remoteItems[0].type_).toBe(1);
+  });
 });
