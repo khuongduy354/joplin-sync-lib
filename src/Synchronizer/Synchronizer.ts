@@ -30,11 +30,13 @@ import { fullPathForSyncUpload, serializeForSync } from "../E2E";
 import {
   createItemsInput,
   createItemsOutput,
+  deleteItemsInput,
   getItemInput,
   getItemOutput,
   getItemsInput,
   getItemsMetadataInput,
   getItemsMetadataOutput,
+  getItemsOutput,
   updateItemInput,
   updateItemOutput,
   verifySyncInfoInput,
@@ -465,59 +467,22 @@ export default class Synchronizer {
     return deltaResult;
   }
 
-  public async getItems(options: getItemsInput) {
-    // TODO: current assumming only metadata so no need for this
-    // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
-    if (!options.deltaResult) {
-      logger.warn("No delta result to download");
-      return;
-    }
-
-    const listResult = options.deltaResult;
-
-    // assuming metadata only
-    // const supportsDeltaWithItems = getSupportsDeltaWithItems(listResult);
-
-    // logger.info("supportsDeltaWithItems = ", supportsDeltaWithItems);
-
-    const remotes = listResult.items;
-
-    this.logSyncOperation(
-      "fetchingTotal",
-      null,
-      null,
-      "Fetching delta items from sync target",
-      remotes.length
-    );
-
-    const remoteIds = remotes.map((r: any) => BaseItem.pathToId(r.path));
-
-    for (const remote of remotes) {
-      let needsToDownload = true;
-
-      // File API default to false
-      // if (this.api().supportsAccurateTimestamp) {
-      //   const local = locals.find(
-      //     (l) => l.id === BaseItem.pathToId(remote.path)
-      //   );
-      //   if (local && local.updated_time === remote.jop_updated_time)
-      //     needsToDownload = false;
-      // }
-
-      // if (supportsDeltaWithItems) {
-      //   needsToDownload = false;
-      // }
-
-      if (needsToDownload) {
-        this.downloadQueue_.push(remote.path, async () => {
-          return this.apiCall("get", remote.path);
-        });
-      }
-    }
-
+  public async getItems(options: getItemsInput): Promise<getItemsOutput> {
+    // prepare download queue
+    if (this.downloadQueue_) this.downloadQueue_.stop();
+    this.downloadQueue_ = new TaskQueue("syncDownload");
+    this.downloadQueue_.logger_ = logger;
     let result = [] as any[];
-    // Comparision of locals and remotes to determine sync action (download or not)
-    for (let i = 0; i < remotes.length; i++) {
+
+    for (const remoteId of options.ids) {
+      const path = BaseItem.systemPath(remoteId);
+      this.downloadQueue_.push(path, async () => {
+        return this.apiCall("get", path);
+      });
+    }
+
+    // Download operation
+    for (const remoteId of options.ids) {
       this.logSyncOperation(
         "fetchingProcessed",
         null,
@@ -525,12 +490,8 @@ export default class Synchronizer {
         "Processing fetched item"
       );
 
-      const remote = remotes[i];
-      if (!BaseItem.isSystemPath(remote.path)) continue; // The delta API might return things like the .sync, .resource or the root folder
-
-      if (this.downloadQueue_) this.downloadQueue_.stop();
-      this.downloadQueue_ = new TaskQueue("syncDownload");
-      this.downloadQueue_.logger_ = logger;
+      const path = BaseItem.systemPath(remoteId);
+      if (!BaseItem.isSystemPath(path)) continue; // The delta API might return things like the .sync, .resource or the root folder
 
       const loadContent = async () => {
         // if (supportsDeltaWithItems) return remote.jopItem;
@@ -538,10 +499,14 @@ export default class Synchronizer {
         const task = await this.downloadQueue_.waitForResult(path);
         if (task.error) throw task.error;
         if (!task.result) return null;
-        return await BaseItem.unserialize(task.result);
+
+        if (options.unserializeAll) {
+          return await BaseItem.unserialize(task.result);
+        } else {
+          return await task.result;
+        }
       };
 
-      const path = remote.path;
       let content = await loadContent();
       result.push(content);
     }
@@ -668,6 +633,71 @@ export default class Synchronizer {
     } catch (err) {
       throw err;
     }
+  }
+  public async deleteItems(options: deleteItemsInput) {
+    const syncLock = await this.lockHandler().acquireLock(
+      LockType.Sync,
+      this.lockClientType(),
+      this.clientId_
+    );
+
+    this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
+      logger.warn(
+        "Could not refresh lock - cancelling sync. Error was:",
+        error
+      );
+      this.syncTargetIsLocked_ = true;
+      void this.cancel();
+    });
+
+    // delete items
+    const deletedItemsReport = [];
+    for (let i = 0; i < options.deleteItems.length; i++) {
+      const item = options.deleteItems[i];
+      const path = BaseItem.systemPath(item.id);
+      const isResource = item.item_type === BaseModel.TYPE_RESOURCE;
+
+      try {
+        await this.apiCall("delete", path);
+
+        if (isResource) {
+          const remoteContentPath = resourceRemotePath(item.id);
+          await this.apiCall("delete", remoteContentPath);
+        }
+        deletedItemsReport.push({ status: "deleted", item });
+
+        this.logSyncOperation(
+          SyncAction.DeleteRemote,
+          null,
+          { id: item.id },
+          "local has been deleted"
+        );
+      } catch (error) {
+        if (error.code === "isReadOnly") {
+          deletedItemsReport.push({
+            status: "read-only item can't be deleted",
+            item,
+            error,
+          });
+        } else {
+          deletedItemsReport.push({
+            status: "could not delete item",
+            item,
+            error,
+          });
+        }
+      }
+    }
+
+    if (syncLock) {
+      this.lockHandler().stopAutoLockRefresh(syncLock);
+      await this.lockHandler().releaseLock(
+        LockType.Sync,
+        this.lockClientType(),
+        this.clientId_
+      );
+    }
+    return deletedItemsReport;
   }
 
   public async createItems(

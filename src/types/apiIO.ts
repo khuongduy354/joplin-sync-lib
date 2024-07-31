@@ -20,18 +20,9 @@ export type updateItemInput = {
   item: any; //preferably Joplin BaseItem
   lastSync: number; //timestamp in unixMs
 };
-export type updateItemOutput = any;
 
-export type createItemsInput = {
-  items: any[]; //preferably array of Joplin BaseItem
-};
-export type createItemsOutput = {
-  createdItems: any[];
-  failedItems: { item: any; error: any }[];
-};
-
-export type getItemsInput = {
-  status: "conflicted" | "inaccurate timestamp provided" | "success";
+export type updateItemOutput = {
+  status: "conflicted" | "inaccurate timestamp" | "succeeded";
   message: string;
 
   // return when conflicted, use this to resolve conflict
@@ -41,6 +32,23 @@ export type getItemsInput = {
   newItem?: any;
   oldItem?: any;
   newSyncTime?: number; // updated timestamp
+};
+export type getItemsInput = {
+  ids: string[];
+  unserializeAll?: boolean;
+};
+export type getItemsOutput = any[];
+
+export type createItemsInput = {
+  items: any[]; //preferably array of Joplin BaseItem
+};
+export type createItemsOutput = {
+  createdItems: any[];
+  failedItems: { item: any; error: any }[];
+};
+
+export type deleteItemsInput = {
+  deleteItems: any[];
 };
 
 export type verifySyncInfoInput = {
