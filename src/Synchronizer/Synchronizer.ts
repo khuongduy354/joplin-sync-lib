@@ -3,7 +3,7 @@ import { FileApi } from "../FileApi/FileApi";
 import { logger } from "../helpers/logger";
 import fs from "fs-extra";
 import { AppType } from "@joplin/lib/models/Setting";
-import ItemUploader from "@joplin/lib/services/synchronizer/ItemUploader";
+import ItemUploader from "./ItemUploader";
 import { sprintf } from "sprintf-js";
 import {
   Dirnames,
@@ -639,8 +639,8 @@ export default class Synchronizer {
       const path = BaseItem.systemPath(itemId);
       const itemUploader = new ItemUploader(this.api(), this.apiCall);
 
-      console.log("New item: ", newItem);
-      await itemUploader.serializeAndUploadItem(ItemClass, path, newItem);
+      const content = await ItemClass.serializeForSync(newItem);
+      await itemUploader.serializeAndUploadItem(path, newItem, content);
 
       // release lock
       if (syncLock) {
@@ -863,7 +863,8 @@ export default class Synchronizer {
       } else if (action === SyncAction.CreateRemote) {
         let canSync = true;
         try {
-          await itemUploader.serializeAndUploadItem(ItemClass, path, local);
+          const content = await ItemClass.serializeForSync(local);
+          await itemUploader.serializeAndUploadItem(path, local, content);
         } catch (error) {
           failedItems.push({ item: local, error });
           if (error && error.code === "rejectedByTarget") {
