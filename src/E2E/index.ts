@@ -1,63 +1,7 @@
 import JoplinError from "@joplin/lib/JoplinError";
 import BaseItem from "@joplin/lib/models/BaseItem";
-import itemCanBeEncrypted from "@joplin/lib/models/utils/itemCanBeEncrypted";
-import {
-  BaseItemEntity,
-  ResourceEntity,
-} from "@joplin/lib/services/database/types";
+import { BaseItemEntity } from "@joplin/lib/services/database/types";
 import EncryptionService from "@joplin/lib/services/e2ee/EncryptionService";
-import { MasterKeyEntity } from "@joplin/lib/services/e2ee/types";
-
-// UNIMPLEMENTED
-// TODO: not for user to toggle on/off, but as an indication of whether encryption is enabled when interacting with remote
-// use along with LocalInfo to store state of running instance
-// let e2eEnabled = false;
-let masterKeyId = null;
-export async function setupAndEnableEncryption(
-  service: EncryptionService,
-  masterKey: MasterKeyEntity = null,
-  masterPassword: string = null
-) {
-  if (!masterKey) {
-    // May happen for example if there are master keys in info.json but none
-    // of them is set as active. But in fact, unless there is a bug in the
-    // application, this shouldn't happen.
-    console.warn(
-      "Setting up E2EE without a master key - user will need to either generate one or select one of the existing ones as active"
-    );
-  }
-
-  e2eEnabled = true;
-  masterKeyId = masterKey ? masterKey.id : null;
-
-  // setEncryptionEnabled(true, masterKey ? masterKey.id : null);
-
-  if (masterPassword) {
-    // Setting.setValue("encryption.masterPassword", masterPassword);
-  }
-
-  // Mark only the non-encrypted ones for sync since, if there are encrypted ones,
-  // it means they come from the sync target and are already encrypted over there.
-  await BaseItem.markAllNonEncryptedForSync();
-
-  // await loadMasterKeysFromSettings(service);
-}
-
-export async function setupAndDisableEncryption(service: EncryptionService) {
-  // Allow disabling encryption even if some items are still encrypted, because whether E2EE is enabled or disabled
-  // should not affect whether items will eventually be decrypted or not (DecryptionWorker will still work as
-  // long as there are encrypted items). Also even if decryption is disabled, it's possible that encrypted items
-  // will still be received via synchronisation.
-
-  e2eEnabled = false;
-  masterKeyId = null;
-
-  // The only way to make sure everything gets decrypted on the sync target is
-  // to re-sync everything.
-  // await BaseItem.forceSyncAll();
-
-  // await loadMasterKeysFromSettings(service);
-}
 
 export async function serializeForSync(
   item: BaseItemEntity,

@@ -263,7 +263,6 @@ export default class Synchronizer {
   }
 
   public async cancel() {
-    // TODO:
     if (this.cancelling_ || this.state() === "idle") return null;
 
     // Stop queue but don't set it to null as it may be used to
@@ -737,13 +736,6 @@ export default class Synchronizer {
     // Before synchronising make sure all share_id properties are set
     // correctly so as to share/unshare the right items.
 
-    // TODO: share id relook feature
-    // try {
-    //   await Folder.updateAllShareIds(this.resourceService());
-    //   if (this.shareService_) await this.shareService_.checkShareConsistency();
-    // } catch (error) {
-    //   if (error && error.code === ErrorCode.IsReadOnly) {
-
     const itemUploader = new ItemUploader(this.api(), this.apiCall);
 
     let errorToThrow = null;
@@ -876,27 +868,9 @@ export default class Synchronizer {
             shareId: local.share_id,
           });
         } catch (error) {
-          // TODO: resource error handler
           logger.error("Resource upload error: ", error);
-
-          // if (isCannotSyncError(error)) {
-          //   await handleCannotSyncItem(
-          //     ItemClass,
-          //     syncTargetId,
-          //     local,
-          //     error.message
-          //   );
-          //   action = null;
-          // } else if (error && error.code === ErrorCode.IsReadOnly) {
-          //   action = getConflictType(local);
-          //   itemIsReadOnly = true;
-          //   logger.info(
-          //     "Resource is readonly and cannot be modified - handling it as a conflict:",
-          //     local
-          //   );
-          // } else {
-          //   throw error;
-          // }
+          failedItems.push({ item: local, error });
+          continue;
         }
       }
 
@@ -938,17 +912,6 @@ export default class Synchronizer {
       );
     }
     this.syncTargetIsLocked_ = false;
-
-    // After syncing, we run the share service maintenance, which is going
-    // to fetch share invitations, if any.
-    // TODO: share service add to docs to remind users
-    // if (this.shareService_) {
-    // 	try {
-    // 		await this.shareService_.maintenance();
-    // 	} catch (error) {
-    // 		logger.error('Could not run share service maintenance:', error);
-    // 	}
-    // }
 
     this.progressReport_.completedTime = time.unixMs();
 

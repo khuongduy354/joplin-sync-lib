@@ -24,7 +24,7 @@ describe("Synchronizer.e2ee", () => {
     await afterAllCleanUp();
   });
 
-  // TODO:e2e encryption test (see origin)
+  // TODO:e2e encryption test
   // it("items should be encrypted in CREATE operation if e2e is enabled", async () => {});
 
   // it("items should be encrypted in UPDATE operation if e2e is enabled", async () => {});
