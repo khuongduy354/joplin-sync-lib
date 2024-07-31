@@ -1,5 +1,6 @@
 import JoplinError from "@joplin/lib/JoplinError";
 import BaseItem from "@joplin/lib/models/BaseItem";
+import itemCanBeEncrypted from "@joplin/lib/models/utils/itemCanBeEncrypted";
 import {
   BaseItemEntity,
   ResourceEntity,
@@ -151,21 +152,15 @@ export const makeEncryptedResourcePath = (plainTextPath: string) => {
 // as it should be uploaded to the sync target. Note that this may be different from what is stored
 // in the database. In particular, the flag encryption_blob_encrypted might be 1 on the sync target
 // if the resource is encrypted, but will be 0 locally because the device has the decrypted resource.
-export async function fullPathForSyncUpload(resource: BaseItem) {
+export async function fullPathForSyncUpload(
+  resource: BaseItem,
+  e2eEnabled: boolean
+) {
   const plainTextPath = resource.localResourceContentPath;
   if (!plainTextPath)
     throw new Error("Resource does not specified a local path");
 
-  // TODO: share service
-  // const share = resource.share_id
-  //   ? await this.shareService().shareById(resource.share_id)
-  //   : null;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
-  const condition = !e2eEnabled;
-  // || !itemCanBeEncrypted(resource as any, share); TODO: share service
-  if (condition) {
-    // Normally not possible since itemsThatNeedSync should only return decrypted items
+  if (!e2eEnabled) {
     if (resource.encryption_blob_encrypted)
       throw new Error(
         "Trying to access encrypted resource but encryption is currently disabled"

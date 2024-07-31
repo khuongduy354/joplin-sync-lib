@@ -51,6 +51,15 @@ export type deleteItemsInput = {
   deleteItems: any[];
 };
 
+export type deleteItemOutput = {
+  status:
+    | "succeeded"
+    | "could not delete item"
+    | "read-only item can't be deleted";
+  item?: any;
+  error?: any;
+};
+
 export type verifySyncInfoInput = {
   E2E: {
     ppk?: PublicPrivateKeyPair;

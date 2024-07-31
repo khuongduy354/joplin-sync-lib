@@ -30,6 +30,7 @@ import { fullPathForSyncUpload, serializeForSync } from "../E2E";
 import {
   createItemsInput,
   createItemsOutput,
+  deleteItemOutput,
   deleteItemsInput,
   getItemInput,
   getItemOutput,
@@ -634,7 +635,9 @@ export default class Synchronizer {
       throw err;
     }
   }
-  public async deleteItems(options: deleteItemsInput) {
+  public async deleteItems(
+    options: deleteItemsInput
+  ): Promise<deleteItemOutput[]> {
     const syncLock = await this.lockHandler().acquireLock(
       LockType.Sync,
       this.lockClientType(),
@@ -664,7 +667,7 @@ export default class Synchronizer {
           const remoteContentPath = resourceRemotePath(item.id);
           await this.apiCall("delete", remoteContentPath);
         }
-        deletedItemsReport.push({ status: "deleted", item });
+        deletedItemsReport.push({ status: "succeeded", item });
 
         this.logSyncOperation(
           SyncAction.DeleteRemote,
@@ -836,7 +839,7 @@ export default class Synchronizer {
           logger.info("Processing resource: ", local);
           const remoteContentPath = resourceRemotePath(local.id);
           const { path: localResourceContentPath, resource } =
-            await fullPathForSyncUpload(local); // will encryption if E2E is on, else it's the same path as user provided
+            await fullPathForSyncUpload(local, this.e2eInfo().e2ee); // will encryption if E2E is on, else it's the same path as user provided
 
           // path changed === encrypted -> update resource
           if (localResourceContentPath !== local.localResourceContentPath)
@@ -895,7 +898,9 @@ export default class Synchronizer {
           //   throw error;
           // }
         }
-      } else if (action === SyncAction.CreateRemote) {
+      }
+
+      if (action === SyncAction.CreateRemote) {
         let canSync = true;
         try {
           const content = await serializeForSync(local, this.e2eInfo().e2ee);

@@ -164,7 +164,7 @@ describe("Synchronizer.basics", () => {
     });
 
     expect(res2.length).toBe(1);
-    expect(res2[0].status).toBe("deleted");
+    expect(res2[0].status).toBe("succeeded");
 
     // check if the item is deleted
     remote = await syncer.getItem({ id: res.createdItems[0].id });
