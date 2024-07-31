@@ -10,7 +10,7 @@ import { MasterKeyEntity } from "@joplin/lib/services/e2ee/types";
 // UNIMPLEMENTED
 // TODO: not for user to toggle on/off, but as an indication of whether encryption is enabled when interacting with remote
 // use along with LocalInfo to store state of running instance
-let e2eEnabled = false;
+// let e2eEnabled = false;
 let masterKeyId = null;
 export async function setupAndEnableEncryption(
   service: EncryptionService,
@@ -58,7 +58,10 @@ export async function setupAndDisableEncryption(service: EncryptionService) {
   // await loadMasterKeysFromSettings(service);
 }
 
-export async function serializeForSync(item: BaseItemEntity): Promise<string> {
+export async function serializeForSync(
+  item: BaseItemEntity,
+  e2eEnabled: boolean
+): Promise<string> {
   const ItemClass = BaseItem.itemClass(item);
   const shownKeys = ItemClass.fieldNames();
   shownKeys.push("type_");
@@ -69,13 +72,9 @@ export async function serializeForSync(item: BaseItemEntity): Promise<string> {
   //     : null;
   const serialized = await ItemClass.serialize(item, shownKeys);
 
-  if (
-    !e2eEnabled ||
-    !ItemClass.encryptionSupported()
-    // || !itemCanBeEncrypted(item, share) TODO: share service
-  ) {
+  if (!e2eEnabled || !ItemClass.encryptionSupported()) {
     // Normally not possible since itemsThatNeedSync should only return decrypted items
-    //   console.log(item.encryption_applied);
+
     // TODO: bug here, encryption_applied === 0, but condition below returns true
     //   if (!!item.encryption_applied)
     //     throw new JoplinError(

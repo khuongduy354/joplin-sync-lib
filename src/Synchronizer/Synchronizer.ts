@@ -26,7 +26,7 @@ import { ErrorCode } from "@joplin/lib/errors";
 import { createUUID } from "../helpers/item";
 import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
 import TaskQueue from "@joplin/lib/TaskQueue";
-import { fullPathForSyncUpload } from "../E2E";
+import { fullPathForSyncUpload, serializeForSync } from "../E2E";
 import {
   createItemsInput,
   createItemsOutput,
@@ -40,6 +40,7 @@ import {
   verifySyncInfoInput,
 } from "../types/apiIO";
 import { generateKeyPair } from "@joplin/lib/services/e2ee/ppk";
+import { e2eInfo } from "../types/e2eInfo";
 
 export default class Synchronizer {
   public static verboseMode = true;
@@ -55,6 +56,7 @@ export default class Synchronizer {
   private clientId_: string;
   private lockHandler_: LockHandler;
   private migrationHandler_: MigrationHandler;
+  private e2eInfo_: e2eInfo;
   // private encryptionService_: EncryptionService = null;
   // private resourceService_: ResourceService = null;
   private syncTargetIsLocked_ = false;
@@ -99,6 +101,12 @@ export default class Synchronizer {
 
   public clientId() {
     return this.clientId_;
+  }
+  public e2eInfo() {
+    return this.e2eInfo_;
+  }
+  public setE2EInfo(v: e2eInfo) {
+    this.e2eInfo_ = v;
   }
 
   public setLogger(l: any) {
@@ -348,8 +356,6 @@ export default class Synchronizer {
     let remoteInfo = await fetchSyncInfo(this.api());
     logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
 
-    // let syncTargetIsNew = false;
-
     if (!remoteInfo.version) {
       throw new Error(
         "No remote sync info file found. Please initialize sync target with client first."
@@ -363,14 +369,6 @@ export default class Synchronizer {
         `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
       );
 
-    // options = {
-    //   E2E: {
-    //     ppk:,
-    //     e2ee: ,
-    //     activeMasterKeyId: ,
-    //   }
-    // }
-
     // ===================== E2E =====================
 
     let previousE2EE = false;
@@ -379,7 +377,7 @@ export default class Synchronizer {
       options.E2E === undefined ||
       options.E2E.e2ee === undefined
     ) {
-      console.log(
+      logger.info(
         "No E2E info provided by client, assuming client E2E is disabled..."
       );
     } else {
@@ -392,7 +390,7 @@ export default class Synchronizer {
       return {
         status: "aborted",
         message:
-          "There's a change in encryption, please setup your client again to match the remote",
+          "There's a change in remote encryption settings, please fetch and update your e2e input to match the remote's",
         remoteInfo, // use this to reconfigure client
       };
     } else {
@@ -400,15 +398,16 @@ export default class Synchronizer {
 
       if (!remoteInfo.e2ee) {
         // both disable E2E
+
         // set encryption to disable
-        // TODO: encryption enable
-        // setupEncryption(false);
+        this.setE2EInfo({ e2ee: false });
+
         logger.info(
           "Both client and remote disabled E2E, disabling encryption..."
         );
         return {
           status: "succeeded",
-          message: "Sync Info verified and disabled encryption",
+          message: "Sync info verified with disabled encryption",
         };
       } else {
         // both enable E2E, check if they have the same PPK
@@ -418,19 +417,25 @@ export default class Synchronizer {
           return {
             status: "aborted",
             message:
-              "There's a change in encryption key (ppk), please setup your client again to match the remote",
+              "There's a change in encryption key (ppk) settings, please fetch and update your e2e input to match the remote's",
             remoteInfo,
           };
         }
 
         // else enable encryption
         logger.info(
-          "Both client and remote enabled E2E with matched ppk, enabling encryption..."
+          "Both client and remote enabled E2E with matched ppk, setting activeMasterKeyId on client..."
         );
-        // setupEncryption(true, remoteInfo.activeMasterKeyId); TODO
+
+        this.setE2EInfo({
+          e2ee: true,
+          ppk: options.E2E.ppk,
+          activeMasterKeyId: remoteInfo.activeMasterKeyId,
+        });
+
         return {
           status: "succeeded",
-          message: "Sync Info verified and enabled encryption",
+          message: "Sync info verified with enabled encryption",
           remoteInfo,
         };
       }
@@ -639,7 +644,7 @@ export default class Synchronizer {
       const path = BaseItem.systemPath(itemId);
       const itemUploader = new ItemUploader(this.api(), this.apiCall);
 
-      const content = await ItemClass.serializeForSync(newItem);
+      const content = await serializeForSync(newItem, this.e2eInfo().e2ee);
       await itemUploader.serializeAndUploadItem(path, newItem, content);
 
       // release lock
@@ -863,7 +868,7 @@ export default class Synchronizer {
       } else if (action === SyncAction.CreateRemote) {
         let canSync = true;
         try {
-          const content = await ItemClass.serializeForSync(local);
+          const content = await serializeForSync(local, this.e2eInfo().e2ee);
           await itemUploader.serializeAndUploadItem(path, local, content);
         } catch (error) {
           failedItems.push({ item: local, error });

@@ -200,7 +200,7 @@ export function loadClasses() {
   };
   // override some classes
   BaseItem.serialize = serializeModel;
-  BaseItem.serializeForSync = serializeForSync;
+  // BaseItem.serializeForSync = serializeForSync;
   BaseItem.unserialize = unserializeWithoutSQLite;
 
   BaseItem.loadClass("Note", Note);
