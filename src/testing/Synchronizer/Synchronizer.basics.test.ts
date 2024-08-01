@@ -118,7 +118,7 @@ describe("Synchronizer.basics", () => {
       id: "asds",
       title: "un",
       parent_id: "parent id",
-      updated_time: time.IsoToUnixMs("2024-06-14T02:31:45.188Z"), // this is newer, 14 June
+      updated_time: time.IsoToUnixMs("2024-06-14T02:31:45.188Z"),
     };
 
     const note2 = {
@@ -126,7 +126,7 @@ describe("Synchronizer.basics", () => {
       id: "asds",
       title: "un",
       parent_id: "parent id",
-      updated_time: time.IsoToUnixMs("2024-06-01T02:31:45.188Z"), // this is older, 1 June
+      updated_time: time.IsoToUnixMs("2024-06-01T02:31:45.188Z"),
     };
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [note, note2] });

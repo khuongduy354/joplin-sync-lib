@@ -1,5 +1,4 @@
 import { PublicPrivateKeyPair } from "@joplin/lib/services/e2ee/ppk";
-import { PaginatedList } from "../FileApi/FileApi";
 
 export type getItemsMetadataInput = {
   context: {
@@ -7,7 +6,11 @@ export type getItemsMetadataInput = {
   };
   outputLimit?: number;
 };
-export type getItemsMetadataOutput = PaginatedList;
+export type getItemsMetadataOutput = {
+  items: any[];
+  hasMore: boolean;
+  context: any;
+};
 
 export type getItemInput = {
   path?: string;

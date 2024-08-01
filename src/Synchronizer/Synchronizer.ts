@@ -455,6 +455,7 @@ export default class Synchronizer {
       outputLimit: 50,
     }
   ): Promise<getItemsMetadataOutput> {
+    await this.verifySyncInfo();
     // retrieve remote results after timestamp
     const deltaResult: PaginatedList = await this.apiCall("delta", "", {
       context: options.context,
@@ -468,6 +469,7 @@ export default class Synchronizer {
   }
 
   public async getItems(options: getItemsInput): Promise<getItemsOutput> {
+    await this.verifySyncInfo();
     // prepare download queue
     if (this.downloadQueue_) this.downloadQueue_.stop();
     this.downloadQueue_ = new TaskQueue("syncDownload");
@@ -518,6 +520,7 @@ export default class Synchronizer {
   public async getItem(
     options: getItemInput = { unserializeItem: false }
   ): Promise<getItemOutput> {
+    await this.verifySyncInfo();
     let item = null;
     if (options.id) {
       // id is prioritized
@@ -637,6 +640,7 @@ export default class Synchronizer {
   public async deleteItems(
     options: deleteItemsInput
   ): Promise<deleteItemOutput[]> {
+    await this.verifySyncInfo();
     const syncLock = await this.lockHandler().acquireLock(
       LockType.Sync,
       this.lockClientType(),
