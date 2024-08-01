@@ -1,10 +1,10 @@
-import { logger, LoggerWrapper } from "../helpers/logger";
 import { singleton } from "../singleton";
 import helper from "../helpers/misc";
 import { isHidden } from "@joplin/utils/path";
 import { Lock, LockClientType, LockType } from "../Synchronizer/Locks";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import time from "../helpers/time";
+import { LoggerWrapper, logger } from "../helpers/logger";
 const Mutex = require("async-mutex").Mutex;
 
 export interface MultiPutItem {
@@ -82,7 +82,7 @@ export interface ItemStat {
 class FileApi {
   private baseDir_: any;
   private driver_: any;
-  private logger_ = logger;
+  private logger_: LoggerWrapper = console;
   private syncTargetId_: number = null;
   private tempDirName_: string = null;
   public requestRepeatCount_: number = null; // For testing purpose only - normally this value should come from the driver
@@ -179,7 +179,7 @@ class FileApi {
           this.remoteDateNextCheckTime_ = Date.now() + 10 * 60 * 1000;
         }
       } catch (error) {
-        logger.warn(
+        this.logger().warn(
           "Could not retrieve remote date - defaulting to device date:",
           error
         );
@@ -245,7 +245,7 @@ class FileApi {
   }
 
   public setLogger(l: any) {
-    if (!l) l = console;
+    // if (!l) l = console;
     this.logger_ = l;
   }
 
@@ -269,7 +269,7 @@ class FileApi {
     if (!("includeDirs" in options)) options.includeDirs = true;
     if (!("syncItemsOnly" in options)) options.syncItemsOnly = false;
 
-    logger.debug(`list ${this.baseDir()}`);
+    this.logger().debug(`list ${this.baseDir()}`);
 
     const result: PaginatedList = await tryAndRepeat(
       () => this.driver_.list(this.fullPath(path), options),
@@ -299,7 +299,7 @@ class FileApi {
 
   // Deprecated
   public setTimestamp(path: string, timestampMs: number) {
-    logger.debug(`setTimestamp ${this.fullPath(path)}`);
+    this.logger().debug(`setTimestamp ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.setTimestamp(this.fullPath(path), timestampMs),
       this.requestRepeatCount()
@@ -308,7 +308,7 @@ class FileApi {
   }
 
   public mkdir(path: string) {
-    logger.debug(`mkdir ${this.fullPath(path)}`);
+    this.logger().debug(`mkdir ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.mkdir(this.fullPath(path)),
       this.requestRepeatCount()
@@ -316,7 +316,7 @@ class FileApi {
   }
 
   public async stat(path: string) {
-    logger.debug(`stat ${this.fullPath(path)}`);
+    this.logger().debug(`stat ${this.fullPath(path)}`);
 
     const output = await tryAndRepeat(
       () => this.driver_.stat(this.fullPath(path)),
@@ -332,7 +332,7 @@ class FileApi {
   public get(path: string, options: any = null) {
     if (!options) options = {};
     if (!options.encoding) options.encoding = "utf8";
-    logger.debug(`get ${this.fullPath(path)}`);
+    this.logger().debug(`get ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.get(this.fullPath(path), options),
       this.requestRepeatCount()
@@ -340,7 +340,7 @@ class FileApi {
   }
 
   public async put(path: string, content: any, options: any = null) {
-    logger.debug(`put ${this.fullPath(path)}`, options);
+    this.logger().debug(`put ${this.fullPath(path)}`, options);
 
     if (options && options.source === "file") {
       if (!(await this.fsDriver().exists(options.path)))
@@ -363,7 +363,7 @@ class FileApi {
   }
 
   public delete(path: string) {
-    logger.debug(`delete ${this.fullPath(path)}`);
+    this.logger().debug(`delete ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.delete(this.fullPath(path)),
       this.requestRepeatCount()
@@ -372,7 +372,9 @@ class FileApi {
 
   // Deprecated
   public move(oldPath: string, newPath: string) {
-    logger.debug(`move ${this.fullPath(oldPath)} => ${this.fullPath(newPath)}`);
+    this.logger().debug(
+      `move ${this.fullPath(oldPath)} => ${this.fullPath(newPath)}`
+    );
     return tryAndRepeat(
       () => this.driver_.move(this.fullPath(oldPath), this.fullPath(newPath)),
       this.requestRepeatCount()
@@ -392,7 +394,7 @@ class FileApi {
   }
 
   public delta(path: string, options: any = null): Promise<PaginatedList> {
-    logger.debug(`delta ${this.fullPath(path)}`);
+    this.logger().debug(`delta ${this.fullPath(path)}`);
     return tryAndRepeat(
       () => this.driver_.delta(this.fullPath(path), options),
       this.requestRepeatCount()
