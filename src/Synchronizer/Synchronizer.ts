@@ -656,10 +656,18 @@ export default class Synchronizer {
     const deletedItemsReport = [];
     for (let i = 0; i < options.deleteItems.length; i++) {
       const item = options.deleteItems[i];
+      const remoteItem = await this.getItem({
+        id: item.id,
+        unserializeItem: true,
+      });
+      if (!remoteItem) {
+        deletedItemsReport.push({ status: "item not found", item });
+        continue;
+      }
       const path = BaseItem.systemPath(item.id);
       const isResource =
-        item.item_type === BaseModel.TYPE_RESOURCE ||
-        item.type_ === BaseModel.TYPE_RESOURCE;
+        remoteItem.item_type === BaseModel.TYPE_RESOURCE ||
+        remoteItem.type_ === BaseModel.TYPE_RESOURCE;
 
       try {
         await this.apiCall("delete", path);

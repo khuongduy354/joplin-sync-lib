@@ -54,6 +54,7 @@ export type deleteItemsInput = {
 export type deleteItemOutput = {
   status:
     | "succeeded"
+    | "item not found"
     | "could not delete item"
     | "read-only item can't be deleted";
   item?: any;
