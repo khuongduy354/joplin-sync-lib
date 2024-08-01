@@ -22,14 +22,14 @@ export async function itemUpdaterDemo() {
     // attempt to update note 1 to note 2
     const note2 = {
       type_: 1,
-      id: res.createdIds[0],
+      id: res.createdItems[0].id,
       title: "hello 2",
       parent_id: "parent id",
       body: "body after update",
     };
 
     let item = await syncer.getItem({
-      id: res.createdIds[0],
+      id: res.createdItems[0].id,
       unserializeItem: true,
     });
 
@@ -40,7 +40,7 @@ export async function itemUpdaterDemo() {
 
     // get updated note
     item = await syncer.getItem({
-      id: res.createdIds[0],
+      id: res.createdItems[0].id,
       unserializeItem: true,
     });
 

@@ -3,14 +3,40 @@ import {
   ResourceEntity,
   ResourceOcrStatus,
 } from "@joplin/lib/services/database/types";
-import time from "../helpers/time";
+import Synchronizer from "../Synchronizer/Synchronizer";
 
-const getResourcePath = (syncPath: string, id: string) => {
-  if (!syncPath.endsWith("/")) syncPath += "/";
-  return syncPath + ".resource/" + id;
-};
+async function createSampleResourceOnRemote(syncer: Synchronizer) {
+  try {
+    let localResourceContentPath =
+      "./src/sample_app/Storage/resource/image.png";
+    const res = await syncer.createItems({
+      items: [
+        {
+          type_: 4,
+          localResourceContentPath, // path to blob of resource
+        },
+      ],
+    });
+    return res.createdItems[0];
+  } catch (e) {
+    console.error("Failed to create resource: ", e);
+  }
+}
 
-// Looking for new file uploaded, and ocr scan it if it's a resource
+async function cleanUp(syncer: Synchronizer, resourceId: string) {
+  const res = await syncer.deleteItems({
+    deleteItems: [
+      {
+        id: resourceId,
+        type_: 4,
+      },
+    ],
+  });
+  if (res[0].status !== "succeeded")
+    return console.error("Failed to delete, please cleanup manually");
+  console.log("Resource cleanup successfully");
+}
+// Retrieve a resource, process OCR, and update the resource
 export async function OCRService() {
   // setup
   const syncPath = "src/sample_app/Storage/fsSyncTarget"; // filesystem sync target
@@ -19,91 +45,44 @@ export async function OCRService() {
   await syncTarget.initFileApi(syncPath);
   const syncer = await syncTarget.synchronizer();
 
-  const pollInterval = 5; //secs
+  const resourceId = (await createSampleResourceOnRemote(syncer)).id;
 
-  // initial scan for latest timestamp
-  const itemsStat = await syncer.getItemsMetadata();
-  if (itemsStat.items.length === 0) return console.log("No items found");
+  // retrieve the resource
+  const resource = await syncer.getItem({
+    id: resourceId,
+    unserializeItem: true,
+  });
+  if (resource.type_ !== 4) return console.log("Not a resource, skipping");
+  console.log("\n\n");
+  console.log("Resource before OCR: \n", resource);
 
-  let lastSync = 0;
-  for (let item of itemsStat.items) {
-    if (item.updated_time > lastSync) {
-      lastSync = item.updated_time;
-    }
+  // update resource
+  const toSave: ResourceEntity = {
+    id: resourceId,
+  };
+  toSave.ocr_status = ResourceOcrStatus.Done;
+  toSave.ocr_text = "Processed ocr text"; // result.text;
+  toSave.ocr_details = "Processed ocr details"; // result.details;
+  toSave.ocr_error = "";
+
+  const updateResult = await syncer.updateItem({
+    item: toSave,
+    lastSync: resource.updated_time, // only update if lastSync parameter exactly match resource.updated_time
+  });
+
+  // update results
+  if (updateResult.status === "succeeded") {
+    console.log("OCR updated successfully: ");
+    const newResource = await syncer.getItem({
+      id: resourceId,
+      unserializeItem: true,
+    });
+    console.log(newResource);
+  } else {
+    console.log("Update conflicted, try again with the correct timestamp");
   }
 
-  console.log("Found item with latest sync time: ", time.unixMsToIso(lastSync));
-
-  // polling
-  setInterval(async () => {
-    // retrieve items newer than last scan
-    const itemsStat = await syncer.getItemsMetadata({
-      context: { timestamp: lastSync },
-    });
-    if (!itemsStat.items.length) return console.log("No new items found");
-
-    for (let itemStat of itemsStat.items) {
-      let item = null;
-      try {
-        // quick check if item is resource
-        item = await syncer.getItem({
-          path: itemStat.path,
-          unserializeItem: true,
-        });
-        // is resource
-        if (item.type_ !== 4) {
-          console.log("Not a resource, skipping");
-          item = null;
-          continue;
-        }
-      } catch (err) {
-        // skip if error
-        console.log(
-          "Error processing item: ",
-          err.message,
-          ", Processing next item"
-        );
-        continue;
-      }
-
-      if (!item) continue;
-
-      console.log("Is resource, Processing item: ", item.id);
-      // mimicking download action
-      // const resourcePath = getResourcePath(syncPath, item.id);
-
-      //init ocr and scan
-      // const ocr = new OCRService();
-      // const result = await ocr.scan(resourcePath);
-
-      // update to new
-      const toSave: ResourceEntity = {
-        id: item.id,
-      };
-
-      toSave.ocr_status = ResourceOcrStatus.Done;
-      toSave.ocr_text = "Processed ocr text"; // result.text;
-      toSave.ocr_details = "Processed ocr details"; // result.details;
-      toSave.ocr_error = "";
-
-      // push to remote
-      try {
-        const updateResult = await syncer.updateItem({
-          item: toSave,
-          lastSync,
-        });
-        if (updateResult.status === "success") {
-          lastSync = updateResult.newSyncTime as number;
-          console.log("OCR scanned: ", toSave);
-          break;
-        } else {
-          // update to newer timestamp and retry
-          lastSync = updateResult.newSyncTime as number;
-          console.log("Update conflicted, try retrieveing a newer timestamp");
-        }
-      } catch (err) {
-        console.log("Unknown error updating item: ", err.message);
-      }
-    }
-  }, pollInterval * 1000);
+  // comment this line to see the resource in filesystem after finished
+  // src/sample_app/Storage/fsSyncTarget/
+  await cleanUp(syncer, resourceId);
 }
