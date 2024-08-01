@@ -82,7 +82,7 @@ export async function OCRService() {
     console.log("Update conflicted, try again with the correct timestamp");
   }
 
-  // comment this line to see the resource in filesystem after finished
+  // uncomment this for auto clean up in
   // src/sample_app/Storage/fsSyncTarget/
-  await cleanUp(syncer, resourceId);
+  // await cleanUp(syncer, resourceId);
 }

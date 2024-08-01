@@ -78,7 +78,7 @@ export async function mailClient(withAttachment = false) {
 
     // 1. Create payload
     const mailTitle = "This is an email";
-    const mailBody = "This is the body of the email, blahblahblah";
+    const mailBody = "This is the body of the email, blahblahblah ![image](:/)";
     const note = noteBuilder(mailTitle, mailBody); // note is a plain Javascript object { id, title, body, ...}
     const items: any[] = [note];
     if (withAttachment) {
@@ -97,7 +97,6 @@ export async function mailClient(withAttachment = false) {
 
     // 3. Upload email
     const res = await syncer.createItems({ items });
-    console.log(res.createdIds); // return id of the newly created note
   } catch (err) {
     console.error(err);
   }

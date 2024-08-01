@@ -32,6 +32,7 @@ export async function itemUpdaterDemo() {
       id: res.createdItems[0].id,
       unserializeItem: true,
     });
+    console.log("item before update: ", item);
 
     const res2 = await syncer.updateItem({
       item: note2,

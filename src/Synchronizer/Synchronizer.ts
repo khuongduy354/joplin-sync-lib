@@ -653,7 +653,7 @@ export default class Synchronizer {
     });
 
     // delete items
-    const deletedItemsReport = [];
+    const deletedItemsReport: deleteItemOutput[] = [];
     for (let i = 0; i < options.deleteItems.length; i++) {
       const item = options.deleteItems[i];
       const remoteItem = await this.getItem({
