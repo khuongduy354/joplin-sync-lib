@@ -1,11 +1,7 @@
-export const logger = {
-  info: console.info,
-  error: console.error,
-  warn: console.warn,
-  debug: console.debug,
-};
+// logger is the default logger
+export const logger: Logger = console;
 
-export interface LoggerWrapper {
+export type Logger = {
   // eslint-disable-next-line @typescript-eslint/ban-types -- Old code before rule was applied
   debug: Function;
   // eslint-disable-next-line @typescript-eslint/ban-types -- Old code before rule was applied
@@ -14,4 +10,4 @@ export interface LoggerWrapper {
   warn: Function;
   // eslint-disable-next-line @typescript-eslint/ban-types -- Old code before rule was applied
   error: Function;
-}
+};

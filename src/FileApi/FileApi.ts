@@ -4,7 +4,7 @@ import { isHidden } from "@joplin/utils/path";
 import { Lock, LockClientType, LockType } from "../Synchronizer/Locks";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import time from "../helpers/time";
-import { LoggerWrapper, logger } from "../helpers/logger";
+import { logger, Logger } from "../helpers/logger";
 const Mutex = require("async-mutex").Mutex;
 
 export interface MultiPutItem {
@@ -50,7 +50,7 @@ async function tryAndRepeat(fn: Function, count: number) {
 
 export interface DeltaOptions {
   allItemIdsHandler(): Promise<string[]>;
-  logger?: LoggerWrapper;
+  logger?: Logger;
   wipeOutFailSafe: boolean;
   outputLimit: number;
 }
@@ -82,7 +82,7 @@ export interface ItemStat {
 class FileApi {
   private baseDir_: any;
   private driver_: any;
-  private logger_: LoggerWrapper = console;
+  private logger_: Logger = console;
   private syncTargetId_: number = null;
   private tempDirName_: string = null;
   public requestRepeatCount_: number = null; // For testing purpose only - normally this value should come from the driver
