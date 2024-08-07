@@ -451,16 +451,26 @@ export default class Synchronizer {
   // options.outputLimit = 50, means get 50 items per method call
   public async getItemsMetadata(
     options: getItemsMetadataInput = {
-      context: { timestamp: 0 },
+      context: { timestamp: 0, trackDeleteItems: false },
       outputLimit: 50,
+      allItemIdsHandler: async () => {
+        return [];
+      },
     }
   ): Promise<getItemsMetadataOutput> {
     await this.verifySyncInfo();
+
+    if (!options.allItemIdsHandler)
+      // TODO: set a centralized default values, as the function parameter is not properly handled.
+      options.allItemIdsHandler = async () => {
+        return [];
+      };
+
     // retrieve remote results after timestamp
     const deltaResult: PaginatedList = await this.apiCall("delta", "", {
       context: options.context,
-      allLocalItemsIds: [], // TODO: handle delete operations
-      wipeOutFailSafe: false,
+      allItemIdsHandler: options.allItemIdsHandler,
+      wipeOutFailSafe: false, // TODO: remove this
       logger: console,
       outputLimit: options.outputLimit,
     });

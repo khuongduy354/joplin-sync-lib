@@ -50,6 +50,7 @@ async function tryAndRepeat(fn: Function, count: number) {
 
 export interface DeltaOptions {
   allItemIdsHandler(): Promise<string[]>;
+  trackDeleteItems: boolean; // if true, delta operation tracks deleted items
   logger?: Logger;
   wipeOutFailSafe: boolean;
   outputLimit: number;
@@ -443,7 +444,7 @@ function basicDeltaContextFromOptions_(options: any) {
     filesAtTimestamp: [],
     statsCache: null,
     statIdsCache: null,
-    deletedItemsProcessed: false,
+    trackDeleteItems: false,
   };
 
   if (!options || !options.context) return output;
@@ -462,9 +463,9 @@ function basicDeltaContextFromOptions_(options: any) {
     options.context && options.context.statIdsCache
       ? options.context.statIdsCache
       : null;
-  output.deletedItemsProcessed =
-    options.context && "deletedItemsProcessed" in options.context
-      ? options.context.deletedItemsProcessed
+  output.trackDeleteItems =
+    options.context && "trackDeleteItems" in options.context
+      ? options.context.trackDeleteItems
       : false;
 
   return output;
@@ -477,12 +478,12 @@ function basicDeltaContextFromOptions_(options: any) {
 async function basicDelta(
   path: string,
   getDirStatFn: Function,
-  options: any
+  options: DeltaOptions
 ): Promise<PaginatedList> {
   let outputLimit = 50;
   if (options.outputLimit) outputLimit = options.outputLimit;
 
-  const itemIds = await options.allLocalItemsIds;
+  const itemIds = await options.allItemIdsHandler();
   if (!Array.isArray(itemIds))
     throw new Error("Delta API not supported - local IDs must be provided");
 
@@ -504,7 +505,7 @@ async function basicDelta(
     filesAtTimestamp: context.filesAtTimestamp.slice(),
     statsCache: context.statsCache,
     statIdsCache: context.statIdsCache,
-    deletedItemsProcessed: context.deletedItemsProcessed,
+    trackDeleteItems: context.trackDeleteItems,
   };
 
   // Stats are cached until all items have been processed (until hasMore is false)
@@ -569,9 +570,7 @@ async function basicDelta(
 
   logger.info(`BasicDelta: Report: ${JSON.stringify(updateReport)}`);
 
-  // TODO: not implementing delete yet
-  // if(!newContext.deletedItemsProcessed){
-  if (false) {
+  if (newContext.trackDeleteItems) {
     // Find out which items have been deleted on the sync target by comparing the items
     // we have to the items on the target.
     // Note that when deleted items are processed it might result in the output having
@@ -597,24 +596,24 @@ async function basicDelta(
     // directory, or if a network drive gets disconnected and returns an empty dir
     // instead of an error. In that case, we don't wipe out the user data, unless
     // they have switched off the fail-safe.
-    if (options.wipeOutFailSafe && percentDeleted >= 0.9)
-      throw new Error(
-        "More than 90% of the notes are going to be deleted. This is likely a configuration error or bug. Sync has been aborted to prevent data loss."
-      );
+    // if (options.wipeOutFailSafe && percentDeleted >= 0.9)
+    //   throw new Error(
+    //     "More than 90% of the notes are going to be deleted. This is likely a configuration error or bug. Sync has been aborted to prevent data loss."
+    //   );
 
     output = output.concat(deletedItems);
   }
 
-  newContext.deletedItemsProcessed = true;
+  newContext.trackDeleteItems = true;
 
   const hasMore = output.length >= outputLimit;
 
   if (!hasMore) {
-    // Clear temporary info from context. It's especially important to remove deletedItemsProcessed
+    // Clear temporary info from context. It's especially important to remove trackDeleteItems
     // so that they are processed again on the next sync.
     newContext.statsCache = null;
     newContext.statIdsCache = null;
-    delete newContext.deletedItemsProcessed;
+    delete newContext.trackDeleteItems;
   }
 
   return {

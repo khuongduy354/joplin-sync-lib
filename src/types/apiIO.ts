@@ -3,7 +3,9 @@ import { PublicPrivateKeyPair } from "@joplin/lib/services/e2ee/ppk";
 export type getItemsMetadataInput = {
   context: {
     timestamp?: number; //unixMs
+    trackDeleteItems?: boolean; // if true, delta returns ids in allItemIdsHandler, that are not in remote items (deleted remotely)
   };
+  allItemIdsHandler?: () => Promise<string[]>; // all local items id, used to track remote deleted items
   outputLimit?: number;
 };
 export type getItemsMetadataOutput = {

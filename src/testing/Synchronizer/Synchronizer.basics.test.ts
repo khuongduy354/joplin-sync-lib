@@ -137,9 +137,41 @@ describe("Synchronizer.basics", () => {
 
     // pull a file that is 10 minutes ahead of now
     const timestamp = time.unixMs() + 10 * 60 * 1000;
-    allItems = await syncer.getItemsMetadata({ context: { timestamp } });
+    allItems = await syncer.getItemsMetadata({
+      context: { timestamp },
+    });
 
     expect(allItems.items.length).toBe(0); // no new items should be pulled
+  });
+
+  it("should track deleted items in get items metadata with delta algorithm", async () => {
+    // upload 1 note
+    const note1 = {
+      type_: 1,
+      id: "random",
+      title: "un",
+      parent_id: "parent id",
+      updated_time: time.IsoToUnixMs("2024-06-14T02:31:45.188Z"),
+    };
+
+    const syncer = synchronizer(1);
+    const res = await syncer.createItems({ items: [note1] });
+    const id1 = res.createdItems[0].id;
+
+    // pull all files
+    let allItems = await syncer.getItemsMetadata();
+    expect(allItems.items.length).toBe(2); // include info.json, this will be hidden later
+
+    await syncer.deleteItems({ deleteItems: [{ id: id1 }] });
+
+    allItems = await syncer.getItemsMetadata({
+      context: { trackDeleteItems: true },
+      allItemIdsHandler: async () => {
+        return [id1];
+      },
+    });
+    expect(allItems.items.length).toBe(2); // include info.json, this will be hidden later
+    expect(allItems.items[1].isDeleted).toBe(true);
   });
 
   it("should delete remote items", async () => {
