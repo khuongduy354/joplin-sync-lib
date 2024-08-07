@@ -134,6 +134,7 @@ describe("Synchronizer.basics", () => {
     // pull all files
     let allItems = await syncer.getItemsMetadata();
     expect(allItems.items.length).toBe(3);
+    expect(allItems.items[1].id).toBe(res.createdItems[0].id);
 
     // pull a file that is 10 minutes ahead of now
     const timestamp = time.unixMs() + 10 * 60 * 1000;

@@ -472,6 +472,11 @@ export default class Synchronizer {
       logger: console,
     });
 
+    // assign ids to items
+    deltaResult.items.forEach(
+      (item) => (item.id = BaseItem.pathToId(item.path))
+    );
+
     return deltaResult;
   }
 
