@@ -448,11 +448,9 @@ export default class Synchronizer {
 
   // options.context.timestamp should be input by user
   // leave empty == 0, means get all remote items
-  // options.outputLimit = 50, means get 50 items per method call
   public async getItemsMetadata(
     options: getItemsMetadataInput = {
       context: { timestamp: 0, trackDeleteItems: false },
-      outputLimit: 50,
       allItemIdsHandler: async () => {
         return [];
       },
@@ -472,7 +470,6 @@ export default class Synchronizer {
       allItemIdsHandler: options.allItemIdsHandler,
       wipeOutFailSafe: false, // TODO: remove this
       logger: console,
-      outputLimit: options.outputLimit,
     });
 
     return deltaResult;

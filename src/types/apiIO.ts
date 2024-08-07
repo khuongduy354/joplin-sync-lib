@@ -10,7 +10,6 @@ export type getItemsMetadataInput = {
 };
 export type getItemsMetadataOutput = {
   items: any[];
-  hasMore: boolean;
   context: any;
 };
 

@@ -34,7 +34,6 @@ export interface RemoteItem {
 
 export interface PaginatedList {
   items: RemoteItem[];
-  hasMore: boolean;
   context: any;
 }
 // eslint-disable-next-line @typescript-eslint/ban-types -- Old code before rule was applied
@@ -53,7 +52,6 @@ export interface DeltaOptions {
   trackDeleteItems: boolean; // if true, delta operation tracks deleted items
   logger?: Logger;
   wipeOutFailSafe: boolean;
-  outputLimit: number;
 }
 
 export enum GetOptionsTarget {
@@ -480,9 +478,6 @@ async function basicDelta(
   getDirStatFn: Function,
   options: DeltaOptions
 ): Promise<PaginatedList> {
-  let outputLimit = 50;
-  if (options.outputLimit) outputLimit = options.outputLimit;
-
   const itemIds = await options.allItemIdsHandler();
   if (!Array.isArray(itemIds))
     throw new Error("Delta API not supported - local IDs must be provided");
@@ -564,8 +559,6 @@ async function basicDelta(
 
     newContext.filesAtTimestamp.push(stat.path);
     output.push(stat);
-
-    if (output.length >= outputLimit) break;
   }
 
   logger.info(`BasicDelta: Report: ${JSON.stringify(updateReport)}`);
@@ -573,8 +566,6 @@ async function basicDelta(
   if (newContext.trackDeleteItems) {
     // Find out which items have been deleted on the sync target by comparing the items
     // we have to the items on the target.
-    // Note that when deleted items are processed it might result in the output having
-    // more items than outputLimit. This is acceptable since delete operations are cheap.
     const deletedItems = [];
     for (let i = 0; i < itemIds.length; i++) {
       const itemId = itemIds[i];
@@ -606,18 +597,13 @@ async function basicDelta(
 
   newContext.trackDeleteItems = true;
 
-  const hasMore = output.length >= outputLimit;
-
-  if (!hasMore) {
-    // Clear temporary info from context. It's especially important to remove trackDeleteItems
-    // so that they are processed again on the next sync.
-    newContext.statsCache = null;
-    newContext.statIdsCache = null;
-    delete newContext.trackDeleteItems;
-  }
+  // Clear temporary info from context. It's especially important to remove trackDeleteItems
+  // so that they are processed again on the next sync.
+  newContext.statsCache = null;
+  newContext.statIdsCache = null;
+  delete newContext.trackDeleteItems;
 
   return {
-    hasMore: hasMore,
     context: newContext,
     items: output,
   };
