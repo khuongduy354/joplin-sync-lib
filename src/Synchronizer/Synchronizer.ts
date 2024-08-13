@@ -146,11 +146,6 @@ export default class Synchronizer {
     return this.migrationHandler_;
   }
 
-  public maxResourceSize() {
-    if (this.maxResourceSize_ !== null) return this.maxResourceSize_;
-    return this.appType_ === AppType.Mobile ? 100 * 1000 * 1000 : Infinity;
-  }
-
   public setShareService(v: ShareService) {
     this.shareService_ = v;
   }
@@ -547,6 +542,18 @@ export default class Synchronizer {
     }
 
     return item;
+  }
+
+  public async getBlob(id: string, outputPath: string) {
+    try {
+      await this.verifySyncInfo();
+      await this.apiCall("get", BaseItem.systemPath(id), {
+        target: "file",
+        path: outputPath,
+      });
+    } catch (err) {
+      throw err;
+    }
   }
 
   public async updateItem(options: updateItemInput): Promise<updateItemOutput> {
