@@ -1,4 +1,5 @@
 import BaseItem from "@joplin/lib/models/BaseItem";
+import fs from "fs-extra";
 import {
   afterAllCleanUp,
   setupDatabaseAndSynchronizer,
@@ -6,6 +7,7 @@ import {
 } from "../test-utils";
 import time from "../../helpers/time";
 import { loadClasses } from "../../helpers/item";
+import { samplePngResource } from "../../sample_app/mailClient";
 
 describe("Synchronizer.basics", () => {
   beforeEach(async () => {
@@ -230,5 +232,32 @@ describe("Synchronizer.basics", () => {
     });
     expect(remoteItems.length).toBe(10);
     expect(remoteItems[0].type_).toBe(1);
+  });
+
+  it("should upload/download resource with blob", async () => {
+    // prep payload
+    const resourcePath = "./src/testing/resource/image.png";
+    const resource = samplePngResource(resourcePath);
+
+    // upload
+    const syncer = synchronizer(1);
+    const res = await syncer.createItems({ items: [resource] });
+
+    // ensure resource metadata on remote
+    const remoteRes = await syncer.getItem({
+      id: res.createdItems[0].id,
+      unserializeItem: true,
+    });
+    // expect(remoteRes).toBe({});
+    expect(remoteRes.id).toBe(res.createdItems[0].id);
+
+    // download blob
+    const localPath = "./temp/image.png";
+    await syncer.getBlob(res.createdItems[0].id, localPath);
+    expect(fs.existsSync(localPath)).toBe(true);
+
+    // cleanup
+    fs.unlinkSync(localPath);
+    expect(fs.existsSync(localPath)).toBe(false);
   });
 });
