@@ -805,16 +805,34 @@ export default class Synchronizer {
     // id generation
     locals.forEach((item) => {
       item.id = createUUID();
-      const timeNow = time.unixMs();
-      item.updated_time = timeNow;
-      item.created_time = timeNow;
-      item.user_updated_time = timeNow;
-      item.user_created_time = timeNow;
     });
 
     for (let i = 0; i < locals.length; i++) {
       let local = locals[i];
-      const ItemClass: typeof BaseItem = BaseItem.itemClass(local);
+      // note must have parent_id
+      if (local.type_ === BaseModel.TYPE_NOTE && !local.parent_id) {
+        failedItems.push({
+          item: local,
+          error: new Error("Notes must contain parent id"),
+        });
+        continue;
+      }
+
+      // id generation
+      local.id = local.overrideId ? local.overrideId : createUUID();
+
+      // timestamps generation
+      let newCreatedTime =
+        typeof local.overrideCreatedTime === "number"
+          ? local.overrideCreatedTime
+          : time.unixMs();
+      [
+        "created_time",
+        "updated_time",
+        "user_updated_time",
+        "user_created.time",
+      ].forEach((field) => (local[field] = newCreatedTime));
+
       const path = BaseItem.systemPath(local.id);
 
       // Safety check to avoid infinite loops.
