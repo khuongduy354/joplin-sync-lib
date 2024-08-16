@@ -57,6 +57,24 @@ describe("Synchronizer.basics", () => {
     expect(remote.id).toBe(res.createdItems[0].id);
   });
 
+  it("should throw when upload conflicted items ids", async () => {
+    const note = {
+      type_: 1,
+      id: "asds",
+      overrideId: "this is the chosen id",
+      title: "un",
+      parent_id: "parent id",
+      body: "body",
+    };
+
+    const syncer = synchronizer(1);
+    const res1 = await syncer.createItems({ items: [note] });
+    const res2 = await syncer.createItems({ items: [note] });
+    expect(res2.failedItems[0].error.message).toBe(
+      "Remote item exists, can't create. "
+    );
+  });
+
   it("should update remote items", async () => {
     const syncer = synchronizer(1);
     const note = {

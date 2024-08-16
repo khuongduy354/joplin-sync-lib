@@ -853,13 +853,15 @@ export default class Synchronizer {
 
       const remote: RemoteItem = await this.apiCall("stat", path);
       let action: SyncAction = null;
-      let itemIsReadOnly = false;
       let reason = "";
-      // let remoteContent = null;
 
       if (remote) {
         logger.info("REMOTE EXIST: ", remote);
-        throw new Error("Remote item exists, can't create. ");
+        failedItems.push({
+          item: local,
+          error: new Error("Remote item exists, can't create. "),
+        });
+        continue;
       }
 
       action = SyncAction.CreateRemote;
