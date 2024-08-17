@@ -55,8 +55,6 @@ export default class MigrationHandler extends BaseService {
 
   // This library only need version 3
   public async initSyncInfo3() {
-    const targetVersion = 3;
-
     // acquire lock
     this.logger().info("MigrationHandler: Acquiring exclusive lock");
     const exclusiveLock = await this.lockHandler_.acquireLock(

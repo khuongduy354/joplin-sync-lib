@@ -3,6 +3,7 @@ import { FileApi } from "../FileApi/FileApi";
 import FileApiDriverLocal from "../FileApi/Driver/FsDriver/file-api-driver-local";
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { AppType } from "@joplin/lib/models/Setting";
+import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
 
 export class FileSystemSyncTarget extends BaseSyncTarget {
   public static id() {
@@ -30,7 +31,10 @@ export class FileSystemSyncTarget extends BaseSyncTarget {
     const driver = new FileApiDriverLocal();
     const fileApi = new FileApi(syncPath, driver);
     fileApi.setSyncTargetId(FileSystemSyncTarget.id());
+    fileApi.setTempDirName(Dirnames.Temp);
+    fileApi.initialize();
     await driver.mkdir(syncPath);
+
     this.fileApi_ = fileApi;
 
     return fileApi;
