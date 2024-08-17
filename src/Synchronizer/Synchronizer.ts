@@ -38,12 +38,13 @@ import {
   getItemsMetadataInput,
   getItemsMetadataOutput,
   getItemsOutput,
+  setupE2EOutput,
   updateItemInput,
   updateItemOutput,
-  verifySyncInfoInput,
 } from "../types/apiIO";
 import { generateKeyPair } from "@joplin/lib/services/e2ee/ppk";
 import { e2eInfo } from "../types/e2eInfo";
+import EncryptionService from "@joplin/lib/services/e2ee/EncryptionService";
 
 export default class Synchronizer {
   public static verboseMode = true;
@@ -59,8 +60,8 @@ export default class Synchronizer {
   private clientId_: string;
   private lockHandler_: LockHandler;
   private migrationHandler_: MigrationHandler;
-  private e2eInfo_: e2eInfo;
-  // private encryptionService_: EncryptionService = null;
+  private e2eInfo_: e2eInfo = { e2ee: false };
+  private encryptionService_: EncryptionService = null;
   // private resourceService_: ResourceService = null;
   private syncTargetIsLocked_ = false;
   // private shareService_: ShareService = null;
@@ -110,6 +111,7 @@ export default class Synchronizer {
   }
   public setE2EInfo(v: e2eInfo) {
     this.e2eInfo_ = v;
+    return this.e2eInfo_;
   }
 
   public setLogger(l: any) {
@@ -342,45 +344,20 @@ export default class Synchronizer {
       }
     }
   }
-  public async verifySyncInfo(options: verifySyncInfoInput = undefined) {
-    try {
-      await this.api().initialize();
-      this.api().setTempDirName(Dirnames.Temp);
-    } catch (error) {
-      throw error;
-    }
 
-    let remoteInfo = await fetchSyncInfo(this.api());
-    logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
-
-    if (!remoteInfo.version) {
-      throw new Error(
-        "No remote sync info file found. Please initialize sync target with client first."
-      );
-    }
-
-    logger.info("Sync target is already setup - checking it...");
-
-    if (remoteInfo.version !== 3)
-      throw new Error(
-        `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
-      );
-
+  public async setupE2E(localE2E: e2eInfo): Promise<setupE2EOutput> {
     // ===================== E2E =====================
 
     let previousE2EE = false;
-    if (
-      options === undefined ||
-      options.E2E === undefined ||
-      options.E2E.e2ee === undefined
-    ) {
+    if (localE2E === undefined || localE2E.e2ee === undefined) {
       logger.info(
         "No E2E info provided by client, assuming client E2E is disabled..."
       );
     } else {
-      previousE2EE = options.E2E.e2ee;
+      previousE2EE = !!localE2E.e2ee;
     }
 
+    let remoteInfo = await fetchSyncInfo(this.api());
     if (remoteInfo.e2ee !== previousE2EE) {
       // There's a change in encryption setup between local and remote
       logger.warn("Encryption mismatched changed between local and remote");
@@ -397,7 +374,11 @@ export default class Synchronizer {
         // both disable E2E
 
         // set encryption to disable
-        this.setE2EInfo({ e2ee: false });
+        this.setE2EInfo({
+          e2ee: false,
+          ppk: null,
+          activeMasterKeyId: null,
+        });
 
         logger.info(
           "Both client and remote disabled E2E, disabling encryption..."
@@ -405,11 +386,12 @@ export default class Synchronizer {
         return {
           status: "succeeded",
           message: "Sync info verified with disabled encryption",
+          e2eInfo: this.e2eInfo(),
         };
       } else {
         // both enable E2E, check if they have the same PPK
         console.log("remote info before check: ", remoteInfo);
-        if (remoteInfo.ppk.id !== options.E2E.ppk.id) {
+        if (remoteInfo.ppk.id !== localE2E.ppk.id) {
           logger.warn("Encryption mismatched changed between local and remote");
           return {
             status: "aborted",
@@ -426,7 +408,7 @@ export default class Synchronizer {
 
         this.setE2EInfo({
           e2ee: true,
-          ppk: options.E2E.ppk,
+          ppk: remoteInfo.ppk,
           activeMasterKeyId: remoteInfo.activeMasterKeyId,
         });
 
@@ -434,9 +416,33 @@ export default class Synchronizer {
           status: "succeeded",
           message: "Sync info verified with enabled encryption",
           remoteInfo,
+          e2eInfo: this.e2eInfo(),
         };
       }
     }
+  }
+  public async verifySyncInfo() {
+    let remoteInfo = await fetchSyncInfo(this.api());
+    logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
+
+    if (!remoteInfo.version) {
+      throw new Error(
+        "No remote sync info file found. Please initialize sync target with client first."
+      );
+    }
+
+    logger.info("Sync target is already setup - checking it...");
+
+    if (remoteInfo.version !== 3)
+      throw new Error(
+        `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
+      );
+
+    const e2eCheck = await this.setupE2E(this.e2eInfo());
+    if (e2eCheck.status != "succeeded")
+      throw new Error(
+        "Remote and local's E2E are different, use setupE2E() to setup properly!"
+      );
   }
 
   // ====================== Sync Library API ======================
@@ -631,7 +637,11 @@ export default class Synchronizer {
       const path = BaseItem.systemPath(itemId);
       const itemUploader = new ItemUploader(this.api(), this.apiCall);
 
-      const content = await serializeForSync(newItem, this.e2eInfo().e2ee);
+      const content = await serializeForSync(
+        newItem,
+        this.e2eInfo(),
+        this.encryptionService()
+      );
       await itemUploader.serializeAndUploadItem(path, newItem, content);
 
       // release lock
@@ -930,7 +940,11 @@ export default class Synchronizer {
       if (action === SyncAction.CreateRemote) {
         let canSync = true;
         try {
-          const content = await serializeForSync(local, this.e2eInfo().e2ee);
+          const content = await serializeForSync(
+            local,
+            this.e2eInfo(),
+            this.encryptionService()
+          );
           await itemUploader.serializeAndUploadItem(path, local, content);
         } catch (error) {
           failedItems.push({ item: local, error });

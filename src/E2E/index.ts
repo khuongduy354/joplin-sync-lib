@@ -2,10 +2,13 @@ import JoplinError from "@joplin/lib/JoplinError";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import { BaseItemEntity } from "@joplin/lib/services/database/types";
 import EncryptionService from "@joplin/lib/services/e2ee/EncryptionService";
+import { EncryptionMethod, e2eInfo } from "../types/e2eInfo";
+import { logger } from "../helpers/logger";
 
 export async function serializeForSync(
   item: BaseItemEntity,
-  e2eEnabled: boolean
+  e2eInfo: e2eInfo,
+  e2eService: EncryptionService
 ): Promise<string> {
   const ItemClass = BaseItem.itemClass(item);
   const shownKeys = ItemClass.fieldNames();
@@ -17,7 +20,7 @@ export async function serializeForSync(
   //     : null;
   const serialized = await ItemClass.serialize(item, shownKeys);
 
-  if (!e2eEnabled || !ItemClass.encryptionSupported()) {
+  if (!e2eInfo.e2ee || !ItemClass.encryptionSupported()) {
     // Normally not possible since itemsThatNeedSync should only return decrypted items
 
     // TODO: bug here, encryption_applied === 0, but condition below returns true
@@ -28,6 +31,7 @@ export async function serializeForSync(
     //       )}`,
     //       "cannotSyncEncrypted"
     //     );
+    logger.info("E2E disabled, item will be serialized unencrypted");
     return serialized;
   }
 
@@ -42,10 +46,10 @@ export async function serializeForSync(
   let cipherText = null;
 
   try {
-    const e2eService = new EncryptionService();
+    const masterKeyId = e2eInfo.activeMasterKeyId || "";
+
     cipherText = await e2eService.encryptString(serialized, {
-      //   masterKeyId: share && share.master_key_id ? share.master_key_id : "",
-      masterKeyId: "",
+      masterKeyId,
     });
   } catch (error) {
     const msg = [`Could not encrypt item ${item.id}`];

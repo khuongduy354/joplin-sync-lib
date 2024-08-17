@@ -3,8 +3,11 @@ import BaseItem from "@joplin/lib/models/BaseItem";
 import Resource from "@joplin/lib/models/Resource";
 import moment from "moment";
 import { v4 } from "uuid";
-import { serializeForSync } from "../E2E";
 import Note from "@joplin/lib/models/Note";
+import sjcl from "@joplin/lib/vendor/sjcl.js";
+import shim from "@joplin/lib/shim";
+import crypto from "crypto";
+import Setting, { AppType } from "@joplin/lib/models/Setting";
 
 // Providing functions to work with Joplin Models Structure
 
@@ -205,4 +208,17 @@ export function loadClasses() {
 
   BaseItem.loadClass("Note", Note);
   BaseItem.loadClass("Resource", Resource);
+
+  // for encryption only
+  shim.randomBytes = async (count) => {
+    const buffer = crypto.randomBytes(count);
+    return Array.from(buffer);
+  };
+
+  shim.sjclModule = sjcl;
+  Setting.constants_.appId = "Sync API"; // TODO: separate app id ?
+  Setting.constants_.appType = AppType.Desktop;
+  shim.setTimeout = setTimeout;
+  shim.waitForFrame = () => {};
+  shim.clearTimeout = clearTimeout;
 }

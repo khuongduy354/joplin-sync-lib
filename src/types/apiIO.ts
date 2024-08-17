@@ -1,4 +1,4 @@
-import { PublicPrivateKeyPair } from "@joplin/lib/services/e2ee/ppk";
+import { e2eInfo } from "./e2eInfo";
 
 export type getItemsMetadataInput = {
   context: {
@@ -65,15 +65,9 @@ export type deleteItemOutput = {
   error?: any;
 };
 
-export type verifySyncInfoInput = {
-  E2E: {
-    ppk?: PublicPrivateKeyPair;
-    e2ee: boolean;
-  };
-};
-
-export type verifySynInfoOutput = {
-  status: "success" | "aborted";
+export type setupE2EOutput = {
+  status: "succeeded" | "aborted";
   message: string;
-  remoteSyncInfo?: any;
+  remoteInfo?: any;
+  e2eInfo?: e2eInfo;
 };
