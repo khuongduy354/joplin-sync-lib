@@ -14,10 +14,11 @@ describe("Synchronizer.e2ee", () => {
   beforeEach(async () => {
     loadClasses(); // override default joplin methods
     await setupDatabaseAndSynchronizer(1);
+    await setupDatabaseAndSynchronizer(2);
 
     console.log("initializing sync info version 3...");
-    const migrationHandler1 = synchronizer(1).migrationHandler();
-    await migrationHandler1.initSyncInfo3();
+    await synchronizer(1).migrationHandler().initSyncInfo3();
+    await synchronizer(2).migrationHandler().initSyncInfo3();
 
     console.log("finished initializing sync info version 3");
   });
@@ -26,8 +27,76 @@ describe("Synchronizer.e2ee", () => {
     await afterAllCleanUp();
   });
 
-  // TODO:e2e encryption test
-  // it("items should be encrypted in CREATE operation if e2e is enabled", async () => {});
+  it("items should be encrypted in CREATE operation if e2e is enabled", async () => {
+    const syncer = synchronizer(2);
+
+    // create masterkey
+    const e2eService = new EncryptionService();
+    let mk = await e2eService.generateMasterKey("123456", {
+      encryptionMethod: EncryptionMethod.SJCL2,
+    });
+    mk.id = createUUID();
+    e2eService.loadMasterKey(mk, "123456");
+
+    // create e2e infos
+    const e2eLocalInfo = {
+      e2ee: true,
+      ppk: {
+        publicKey: "asd",
+        privateKey: {
+          encryptionMethod: EncryptionMethod.Custom,
+          ciphertext: "asdsa",
+        },
+        keySize: 1,
+        createdTime: 123,
+        id: "sadsa",
+      },
+      activeMasterKeyId: mk.id,
+    };
+    const e2eRemoteInfo = {
+      // remote format is a bit different
+      e2ee: { value: e2eLocalInfo.e2ee },
+      ppk: {
+        value: e2eLocalInfo.ppk,
+      },
+      activeMasterKeyId: {
+        value: mk.id,
+      },
+      masterKeys: [
+        {
+          id: mk.id,
+        },
+      ],
+    };
+
+    // enable remote e2e
+    await syncer.api().put(
+      "info.json",
+      JSON.stringify({
+        version: 3,
+        ...e2eRemoteInfo,
+      })
+    );
+    // enable local e2e
+    syncer.setEncryptionService(e2eService);
+    const res = await syncer.setupE2E(e2eLocalInfo);
+
+    // CREATE items, should be encrypted
+    const note = {
+      type_: 1,
+      id: "asds",
+      overrideId: "this is the chosen id",
+      title: "un",
+      parent_id: "parent id",
+      body: "body",
+      is_todo: false,
+      overrideCreatedTime: time.unixMs(),
+    };
+    await syncer.createItems({ items: [note] });
+    let item = await syncer.getItem({ id: note.id, unserializeItem: true });
+    expect(!!item.encryption_applied).toBe(true);
+    expect(!!item.encryption_cipher_text).toBe(true);
+  });
 
   it("items should be encrypted in UPDATE operation if e2e is enabled", async () => {
     const syncer = synchronizer(1);

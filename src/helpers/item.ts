@@ -1,6 +1,7 @@
 import BaseModel from "@joplin/lib/BaseModel";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import Resource from "@joplin/lib/models/Resource";
+import path from "path";
 import moment from "moment";
 import { v4 } from "uuid";
 import Note from "@joplin/lib/models/Note";
@@ -14,6 +15,38 @@ import Setting, { AppType } from "@joplin/lib/models/Setting";
 export function createUUID() {
   return v4().replace(/-/g, "");
 }
+export const samplePngResource = (localResourceContentPath: string) => {
+  localResourceContentPath = path.resolve(localResourceContentPath);
+  const sample = {
+    localResourceContentPath, // this is new, absolute path to resource
+    title: "image.png",
+    id: createUUID(),
+    mime: "image/png",
+    filename: "",
+    created_time: "2024-06-14T02:31:45.188Z",
+    updated_time: "2024-06-14T02:31:45.188Z",
+    user_created_time: "2024-06-14T02:31:45.188Z",
+    user_updated_time: "2024-06-14T02:31:45.188Z",
+    file_extension: "png",
+    encryption_cipher_text: "",
+    encryption_applied: 0,
+    encryption_blob_encrypted: 0, // switch to 1 for encrypted
+    size: 331388,
+    is_shared: 0,
+    share_id: "",
+    master_key_id: "",
+    user_data: "",
+    blob_updated_time: 1718332305188,
+    ocr_text: "",
+    ocr_details: "",
+    ocr_status: 0,
+    ocr_error: "",
+    type_: 4,
+  };
+
+  // item = { ...item, ...sample };
+  return sample;
+};
 export async function unserializeWithoutSQLite(content: string) {
   const lines = content.split("\n");
   let output: any = {};
