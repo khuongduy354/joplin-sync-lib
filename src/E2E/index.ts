@@ -14,10 +14,6 @@ export async function serializeForSync(
   const shownKeys = ItemClass.fieldNames();
   shownKeys.push("type_");
 
-  //TODO: share service
-  //   const share = item.share_id
-  //     ? await this.shareService().shareById(item.share_id)
-  //     : null;
   const serialized = await ItemClass.serialize(item, shownKeys);
 
   if (!e2eInfo.e2ee || !ItemClass.encryptionSupported()) {
@@ -101,7 +97,12 @@ export const makeEncryptedResourcePath = (plainTextPath: string) => {
 // in the database. In particular, the flag encryption_blob_encrypted might be 1 on the sync target
 // if the resource is encrypted, but will be 0 locally because the device has the decrypted resource.
 export async function fullPathForSyncUpload(
-  resource: BaseItem,
+  resource: {
+    id: string;
+    localResourceContentPath?: string;
+    encryption_blob_encrypted?: number;
+    size?: number;
+  },
   e2eEnabled: boolean
 ) {
   const plainTextPath = resource.localResourceContentPath;

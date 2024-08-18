@@ -9,6 +9,7 @@ import EncryptionService, {
   EncryptionMethod,
 } from "@joplin/lib/services/e2ee/EncryptionService";
 import { SyncInfoValuePublicPrivateKeyPair } from "@joplin/lib/services/synchronizer/syncInfoUtils";
+import { Item } from "../../types/item";
 
 describe("Synchronizer.e2ee", () => {
   beforeEach(async () => {
@@ -93,7 +94,10 @@ describe("Synchronizer.e2ee", () => {
       overrideCreatedTime: time.unixMs(),
     };
     await syncer.createItems({ items: [note] });
-    let item = await syncer.getItem({ id: note.id, unserializeItem: true });
+    let item = (await syncer.getItem({
+      id: note.id,
+      unserializeItem: true,
+    })) as Item;
     expect(!!item.encryption_applied).toBe(true);
     expect(!!item.encryption_cipher_text).toBe(true);
   });
@@ -113,7 +117,10 @@ describe("Synchronizer.e2ee", () => {
       overrideCreatedTime: time.unixMs(),
     };
     await syncer.createItems({ items: [note] });
-    let item = await syncer.getItem({ id: note.id, unserializeItem: true });
+    let item = (await syncer.getItem({
+      id: note.id,
+      unserializeItem: true,
+    })) as Item;
     expect(!!item.encryption_applied).toBe(false);
     expect(!!item.encryption_cipher_text).toBe(false);
 
@@ -174,7 +181,10 @@ describe("Synchronizer.e2ee", () => {
       item: note,
       lastSync: note.overrideCreatedTime,
     });
-    item = await syncer.getItem({ id: note.id, unserializeItem: true });
+    item = (await syncer.getItem({
+      id: note.id,
+      unserializeItem: true,
+    })) as Item;
     expect(!!item.encryption_applied).toBe(true);
     expect(!!item.encryption_cipher_text).toBe(true);
   });

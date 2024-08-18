@@ -9,13 +9,14 @@ import sjcl from "@joplin/lib/vendor/sjcl.js";
 import shim from "@joplin/lib/shim";
 import crypto from "crypto";
 import Setting, { AppType } from "@joplin/lib/models/Setting";
+import { Item } from "../types/item";
 
 // Providing functions to work with Joplin Models Structure
 
 export function createUUID() {
   return v4().replace(/-/g, "");
 }
-export const samplePngResource = (localResourceContentPath: string) => {
+export const samplePngResource = (localResourceContentPath: string): Item => {
   localResourceContentPath = path.resolve(localResourceContentPath);
   const sample = {
     localResourceContentPath, // this is new, absolute path to resource
@@ -23,10 +24,6 @@ export const samplePngResource = (localResourceContentPath: string) => {
     id: createUUID(),
     mime: "image/png",
     filename: "",
-    created_time: "2024-06-14T02:31:45.188Z",
-    updated_time: "2024-06-14T02:31:45.188Z",
-    user_created_time: "2024-06-14T02:31:45.188Z",
-    user_updated_time: "2024-06-14T02:31:45.188Z",
     file_extension: "png",
     encryption_cipher_text: "",
     encryption_applied: 0,

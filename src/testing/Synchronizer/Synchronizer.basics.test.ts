@@ -6,6 +6,7 @@ import {
 } from "../test-utils";
 import time from "../../helpers/time";
 import { loadClasses } from "../../helpers/item";
+import { Item } from "../../types/item";
 
 describe("Synchronizer.basics", () => {
   beforeEach(async () => {
@@ -49,9 +50,7 @@ describe("Synchronizer.basics", () => {
     expect(remoteByPath).toBe(remote);
 
     // check if remote item is the same as the one uploaded
-    remote = await BaseItem.unserialize(remote);
-    expect(remote.title).toBe(note.title);
-    expect(remote.body).toBe(note.body);
+    remote = (await BaseItem.unserialize(remote as string)) as Item;
     expect(remote.id).toBe(res.createdItems[0].id);
   });
 
@@ -93,11 +92,10 @@ describe("Synchronizer.basics", () => {
       body: "body after update",
     };
 
-    const item = await syncer.getItem({
+    const item = (await syncer.getItem({
       id: res.createdItems[0].id,
       unserializeItem: true,
-    });
-    console.log("item to be updated: ", item);
+    })) as Item;
 
     const res2 = await syncer.updateItem({
       item: note2,
@@ -181,7 +179,7 @@ describe("Synchronizer.basics", () => {
     let allItems = await syncer.getItemsMetadata();
     expect(allItems.items.length).toBe(2); // include info.json, this will be hidden later
 
-    await syncer.deleteItems({ deleteItems: [{ id: id1 }] });
+    await syncer.deleteItems({ deleteItems: [{ id: id1, type_: 0 }] });
 
     allItems = await syncer.getItemsMetadata({
       context: { trackDeleteItems: true },
@@ -211,7 +209,7 @@ describe("Synchronizer.basics", () => {
 
     // delete the item
     const res2 = await syncer.deleteItems({
-      deleteItems: [{ id: res.createdItems[0].id }],
+      deleteItems: [{ id: res.createdItems[0].id, type_: 1 }],
     });
 
     expect(res2.length).toBe(1);

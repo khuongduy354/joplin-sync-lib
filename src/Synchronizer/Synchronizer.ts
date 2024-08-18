@@ -45,6 +45,7 @@ import {
 import { generateKeyPair } from "@joplin/lib/services/e2ee/ppk";
 import { e2eInfo } from "../types/e2eInfo";
 import EncryptionService from "@joplin/lib/services/e2ee/EncryptionService";
+import { Item } from "../types/item";
 
 export default class Synchronizer {
   public static verboseMode = true;
@@ -148,24 +149,12 @@ export default class Synchronizer {
     return this.migrationHandler_;
   }
 
-  public setShareService(v: ShareService) {
-    this.shareService_ = v;
-  }
-
   public setEncryptionService(v: any) {
     this.encryptionService_ = v;
   }
 
   public encryptionService() {
     return this.encryptionService_;
-  }
-
-  public setResourceService(v: ResourceService) {
-    this.resourceService_ = v;
-  }
-
-  protected resourceService(): ResourceService {
-    return this.resourceService_;
   }
 
   private static reportHasErrors(report: any): boolean {
@@ -270,9 +259,9 @@ export default class Synchronizer {
     this.cancelling_ = true;
 
     return new Promise((resolve) => {
-      const iid = shim.setInterval(() => {
+      const iid = setInterval(() => {
         if (this.state() === "idle") {
-          shim.clearInterval(iid);
+          clearInterval(iid);
           resolve(null);
         }
       }, 100);
@@ -460,18 +449,21 @@ export default class Synchronizer {
     await this.verifySyncInfo();
 
     if (!options.allItemIdsHandler)
-      // TODO: set a centralized default values, as the function parameter is not properly handled.
       options.allItemIdsHandler = async () => {
         return [];
       };
 
     // retrieve remote results after timestamp
-    const deltaResult: PaginatedList = await this.apiCall("delta", "", {
-      context: options.context,
-      allItemIdsHandler: options.allItemIdsHandler,
-      wipeOutFailSafe: false, // TODO: remove this
-      logger: console,
-    });
+    const deltaResult: getItemsMetadataOutput = await this.apiCall(
+      "delta",
+      "",
+      {
+        context: options.context,
+        allItemIdsHandler: options.allItemIdsHandler,
+        wipeOutFailSafe: false, // TODO: remove this
+        logger: console,
+      }
+    );
 
     // assign ids to items
     deltaResult.items.forEach(
@@ -577,6 +569,7 @@ export default class Synchronizer {
       });
       if (!remoteItem) throw new Error("Item not found: " + itemId);
 
+      remoteItem = remoteItem as Item;
       // check for conflicts
       if (remoteItem.updated_time > lastSync)
         return {
@@ -631,6 +624,8 @@ export default class Synchronizer {
         "ocr_status",
         "ocr_error",
       ]) {
+        // TODO: add more fields
+        //@ts-ignore
         if (options.item[key]) newItem[key] = options.item[key];
       }
 
@@ -731,18 +726,16 @@ export default class Synchronizer {
     const deletedItemsReport: deleteItemOutput[] = [];
     for (let i = 0; i < options.deleteItems.length; i++) {
       const item = options.deleteItems[i];
-      const remoteItem = await this.getItem({
+      const remoteItem = (await this.getItem({
         id: item.id,
         unserializeItem: true,
-      });
+      })) as Item;
       if (!remoteItem) {
         deletedItemsReport.push({ status: "item not found", item });
         continue;
       }
       const path = BaseItem.systemPath(item.id);
-      const isResource =
-        remoteItem.item_type === BaseModel.TYPE_RESOURCE ||
-        remoteItem.type_ === BaseModel.TYPE_RESOURCE;
+      const isResource = remoteItem.type_ === BaseModel.TYPE_RESOURCE;
 
       try {
         await this.apiCall("delete", path);
@@ -852,7 +845,7 @@ export default class Synchronizer {
       donePaths.push(path);
     };
 
-    const locals = options.items as BaseItem[];
+    const locals = options.items;
 
     // id generation
     locals.forEach((item) => {
@@ -883,6 +876,7 @@ export default class Synchronizer {
         "updated_time",
         "user_updated_time",
         "user_created.time",
+        //@ts-ignore
       ].forEach((field) => (local[field] = newCreatedTime));
 
       const path = BaseItem.systemPath(local.id);
@@ -935,40 +929,40 @@ export default class Synchronizer {
         try {
           logger.info("Processing resource: ", local);
           const remoteContentPath = resourceRemotePath(local.id);
-          const { path: localResourceContentPath, resource } =
-            await fullPathForSyncUpload(local, this.e2eInfo().e2ee); // will encryption if E2E is on, else it's the same path as user provided
+          const { path: encryptedPath, resource } = await fullPathForSyncUpload(
+            local,
+            this.e2eInfo().e2ee
+          ); // will encrypt path if E2E is on, else it's the same path as user provided
 
-          // path changed === encrypted -> update resource
-          if (localResourceContentPath !== local.localResourceContentPath)
-            local = resource;
-
-          if (!localResourceContentPath)
+          if (!encryptedPath)
             throw new Error("Local resource content path not specified");
 
-          if (!fs.existsSync(localResourceContentPath)) {
-            throw new Error(
-              "Blob not found in path: " + localResourceContentPath
-            );
+          // path changed === encrypted -> update resource
+          if (encryptedPath !== local.localResourceContentPath)
+            local = { ...local, ...resource };
+
+          if (!fs.existsSync(encryptedPath)) {
+            throw new Error("Blob not found in path: " + encryptedPath);
           }
 
           if (!local.size) {
-            local.size = fs.statSync(localResourceContentPath).size;
+            local.size = fs.statSync(encryptedPath).size;
           }
 
           if (local.size >= 10 * 1000 * 1000) {
             logger.warn(
-              `Uploading a large resource (resourceId: ${local.id}, size:${resource.size} bytes) which may tie up the sync process.`
+              `Uploading a large resource (resourceId: ${local.id}, size:${local.size} bytes) which may tie up the sync process.`
             );
           }
 
           logger.info(
             "Uploading resource from local path: ",
-            localResourceContentPath,
+            encryptedPath,
             "to remote: ",
             remoteContentPath
           );
           await this.apiCall("put", remoteContentPath, null, {
-            path: localResourceContentPath,
+            path: encryptedPath,
             source: "file",
           });
         } catch (error) {

@@ -9,6 +9,7 @@ import fs from "fs-extra";
 import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
 import { samplePngResource } from "../../helpers/item";
 import BaseModel from "@joplin/lib/BaseModel";
+import { Item } from "../../types/item";
 
 describe("Synchronizer.resource", () => {
   beforeEach(async () => {
@@ -36,11 +37,13 @@ describe("Synchronizer.resource", () => {
     const res = await syncer.createItems({ items: [resource] });
 
     // check if resource available
-    let remote = await syncer.getItem({ id: res.createdItems[0].id });
+    let remote = (await syncer.getItem({
+      id: res.createdItems[0].id,
+      unserializeItem: true,
+    })) as Item;
     expect(!!remote).toBe(true);
 
     // check if remote item is the same as the one uploaded
-    remote = await BaseItem.unserialize(remote);
     expect(remote.title).toBe(resource.title);
     expect(remote.id).toBe(res.createdItems[0].id);
 
@@ -91,10 +94,10 @@ describe("Synchronizer.resource", () => {
     const res = await syncer.createItems({ items: [resource] });
 
     // ensure resource metadata on remote
-    const remoteRes = await syncer.getItem({
+    const remoteRes = (await syncer.getItem({
       id: res.createdItems[0].id,
       unserializeItem: true,
-    });
+    })) as Item;
 
     expect(remoteRes.id).toBe(res.createdItems[0].id);
 

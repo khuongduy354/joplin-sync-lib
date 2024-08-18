@@ -1,4 +1,6 @@
+import { SyncInfo } from "../Synchronizer/syncInfoUtils";
 import { e2eInfo } from "./e2eInfo";
+import { CreateItem, DeltaItem, Item, UpdateItem } from "./item";
 
 export type getItemsMetadataInput = {
   context: {
@@ -9,8 +11,8 @@ export type getItemsMetadataInput = {
   outputLimit?: number;
 };
 export type getItemsMetadataOutput = {
-  items: any[];
-  context: any;
+  items: DeltaItem[];
+  context: { timestamp: number };
 };
 
 export type getItemInput = {
@@ -18,10 +20,10 @@ export type getItemInput = {
   id?: string;
   unserializeItem?: boolean;
 };
-export type getItemOutput = string | null | any;
+export type getItemOutput = Item | string | null;
 
 export type updateItemInput = {
-  item: any; //preferably Joplin BaseItem
+  item: UpdateItem;
   lastSync: number; //timestamp in unixMs
 };
 
@@ -30,29 +32,29 @@ export type updateItemOutput = {
   message: string;
 
   // return when conflicted, use this to resolve conflict
-  remoteItem?: any;
+  remoteItem?: Item;
 
   //  return when success
-  newItem?: any;
-  oldItem?: any;
+  newItem?: Item;
+  oldItem?: Item;
   newSyncTime?: number; // updated timestamp
 };
 export type getItemsInput = {
   ids: string[];
   unserializeAll?: boolean;
 };
-export type getItemsOutput = any[];
+export type getItemsOutput = Item[];
 
 export type createItemsInput = {
-  items: any[]; //preferably array of Joplin BaseItem
+  items: CreateItem[]; //preferably array of Joplin BaseItem
 };
 export type createItemsOutput = {
-  createdItems: any[];
-  failedItems: { item: any; error: any }[];
+  createdItems: Item[];
+  failedItems: { item: Item; error: Error }[];
 };
 
 export type deleteItemsInput = {
-  deleteItems: any[];
+  deleteItems: Item[];
 };
 
 export type deleteItemOutput = {
@@ -61,13 +63,13 @@ export type deleteItemOutput = {
     | "item not found"
     | "could not delete item"
     | "read-only item can't be deleted";
-  item?: any;
-  error?: any;
+  item?: Item;
+  error?: Error;
 };
 
 export type setupE2EOutput = {
   status: "succeeded" | "aborted";
   message: string;
-  remoteInfo?: any;
+  remoteInfo?: SyncInfo;
   e2eInfo?: e2eInfo;
 };
