@@ -4,8 +4,10 @@ import {
   synchronizer,
 } from "../test-utils";
 import time from "../../helpers/time";
-import { loadClasses } from "../../helpers/item";
-import { EncryptionMethod } from "@joplin/lib/services/e2ee/EncryptionService";
+import { createUUID, loadClasses } from "../../helpers/item";
+import EncryptionService, {
+  EncryptionMethod,
+} from "@joplin/lib/services/e2ee/EncryptionService";
 import { SyncInfoValuePublicPrivateKeyPair } from "@joplin/lib/services/synchronizer/syncInfoUtils";
 
 describe("Synchronizer.e2ee", () => {
@@ -27,7 +29,86 @@ describe("Synchronizer.e2ee", () => {
   // TODO:e2e encryption test
   // it("items should be encrypted in CREATE operation if e2e is enabled", async () => {});
 
-  // it("items should be encrypted in UPDATE operation if e2e is enabled", async () => {});
+  it("items should be encrypted in UPDATE operation if e2e is enabled", async () => {
+    const syncer = synchronizer(1);
+
+    // CREATE items, should be unencrypted
+    const note = {
+      type_: 1,
+      id: "asds",
+      overrideId: "this is the chosen id",
+      title: "un",
+      parent_id: "parent id",
+      body: "body",
+      is_todo: false,
+      overrideCreatedTime: time.unixMs(),
+    };
+    await syncer.createItems({ items: [note] });
+    let item = await syncer.getItem({ id: note.id, unserializeItem: true });
+    expect(!!item.encryption_applied).toBe(false);
+    expect(!!item.encryption_cipher_text).toBe(false);
+
+    // create masterkey
+    const e2eService = new EncryptionService();
+    let mk = await e2eService.generateMasterKey("123456", {
+      encryptionMethod: EncryptionMethod.SJCL2,
+    });
+    mk.id = createUUID();
+    e2eService.loadMasterKey(mk, "123456");
+
+    // create e2e infos
+    const e2eLocalInfo = {
+      e2ee: true,
+      ppk: {
+        publicKey: "asd",
+        privateKey: {
+          encryptionMethod: EncryptionMethod.Custom,
+          ciphertext: "asdsa",
+        },
+        keySize: 1,
+        createdTime: 123,
+        id: "sadsa",
+      },
+      activeMasterKeyId: mk.id,
+    };
+    const e2eRemoteInfo = {
+      // remote format is a bit different
+      e2ee: { value: e2eLocalInfo.e2ee },
+      ppk: {
+        value: e2eLocalInfo.ppk,
+      },
+      activeMasterKeyId: {
+        value: mk.id,
+      },
+      masterKeys: [
+        {
+          id: mk.id,
+        },
+      ],
+    };
+
+    // enable remote e2e
+    await syncer.api().put(
+      "info.json",
+      JSON.stringify({
+        version: 3,
+        ...e2eRemoteInfo,
+      })
+    );
+
+    // enable local e2e
+    syncer.setEncryptionService(e2eService);
+    const res = await syncer.setupE2E(e2eLocalInfo);
+
+    // update item, should be encrypted
+    await syncer.updateItem({
+      item: note,
+      lastSync: note.overrideCreatedTime,
+    });
+    item = await syncer.getItem({ id: note.id, unserializeItem: true });
+    expect(!!item.encryption_applied).toBe(true);
+    expect(!!item.encryption_cipher_text).toBe(true);
+  });
 
   it("E2E case 1: remote disable, local disable should prompts succeeded", async () => {
     // init remote
@@ -41,16 +122,13 @@ describe("Synchronizer.e2ee", () => {
 
     // init local
     const localInfo = {
-      E2E: { e2ee: false },
+      e2ee: false,
     };
 
     // compare e2e states
-    const res = await syncer.verifySyncInfo(localInfo);
+    const res = await syncer.setupE2E(localInfo);
     expect(res.status).toBe("succeeded");
     expect(res.message).toBe("Sync info verified with disabled encryption");
-
-    const res2 = await syncer.verifySyncInfo(); // assume local disable if not provide E2E info
-    expect(res2.status).toBe("succeeded");
   });
   it("E2E case 2.1: remote enable, local disable should abort the operation and prompt user to fetch and update e2e input", async () => {
     // init remote
@@ -63,11 +141,11 @@ describe("Synchronizer.e2ee", () => {
 
     // init local
     const localInfo = {
-      E2E: { e2ee: false },
+      e2ee: false,
     };
 
     // compare e2e states
-    const res = await syncer.verifySyncInfo(localInfo);
+    const res = await syncer.setupE2E(localInfo);
     expect(res.status).toBe("aborted");
     expect(res.remoteInfo.e2ee).toBe(true);
     expect(res.message).toBe(
@@ -86,11 +164,11 @@ describe("Synchronizer.e2ee", () => {
 
     // init local
     const localInfo = {
-      E2E: { e2ee: true },
+      e2ee: true,
     };
 
     // compare e2e states
-    const res = await syncer.verifySyncInfo(localInfo);
+    const res = await syncer.setupE2E(localInfo);
     expect(res.status).toBe("aborted");
     expect(res.remoteInfo.e2ee).toBe(false);
     expect(res.message).toBe(
@@ -124,11 +202,12 @@ describe("Synchronizer.e2ee", () => {
 
     // init local with ppk
     const localInfo = {
-      E2E: { e2ee: true, ppk: ppk.value },
+      e2ee: true,
+      ppk: ppk.value,
     };
 
     // compare e2e states
-    const res = await syncer.verifySyncInfo(localInfo);
+    const res = await syncer.setupE2E(localInfo);
     expect(res.status).toBe("succeeded");
     expect(res.message).toBe("Sync info verified with enabled encryption");
   });
@@ -173,11 +252,12 @@ describe("Synchronizer.e2ee", () => {
       updatedTime: time.unixMs(),
     };
     const localInfo = {
-      E2E: { e2ee: true, ppk: ppkLocal.value },
+      e2ee: true,
+      ppk: ppkLocal.value,
     };
 
     // compare e2e states
-    const res = await syncer.verifySyncInfo(localInfo);
+    const res = await syncer.setupE2E(localInfo);
     expect(res.status).toBe("aborted");
     expect(res.message).toBe(
       "There's a change in encryption key (ppk) settings, please fetch and update your e2e input to match the remote's"
