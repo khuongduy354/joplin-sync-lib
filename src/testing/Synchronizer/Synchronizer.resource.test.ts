@@ -5,8 +5,10 @@ import {
   synchronizer,
 } from "../test-utils";
 import { loadClasses } from "../../helpers/item";
-import path from "path";
+import fs from "fs-extra";
 import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
+import { samplePngResource } from "../../helpers/item";
+import BaseModel from "@joplin/lib/BaseModel";
 
 describe("Synchronizer.resource", () => {
   beforeEach(async () => {
@@ -26,41 +28,9 @@ describe("Synchronizer.resource", () => {
     await afterAllCleanUp();
   });
 
-  const samplePngResource = () => {
-    let localResourceContentPath =
-      "./src/sample_app/Storage/resource/image.png";
-    localResourceContentPath = path.resolve(localResourceContentPath);
-    const sample = {
-      localResourceContentPath, // this is new, absolute path to resource
-      title: "image.png",
-      id: "any",
-      mime: "image/png",
-      filename: "",
-      created_time: "2024-06-14T02:31:45.188Z",
-      updated_time: "2024-06-14T02:31:45.188Z",
-      user_created_time: "2024-06-14T02:31:45.188Z",
-      user_updated_time: "2024-06-14T02:31:45.188Z",
-      file_extension: "png",
-      encryption_cipher_text: "",
-      encryption_applied: 0,
-      encryption_blob_encrypted: 0, // switch to 1 for encrypted
-      size: 331388,
-      is_shared: 0,
-      share_id: "",
-      master_key_id: "",
-      user_data: "",
-      blob_updated_time: 1718332305188,
-      ocr_text: "",
-      ocr_details: "",
-      ocr_status: 0,
-      ocr_error: "",
-      type_: 4,
-    };
-
-    return sample;
-  };
   it("should create new resource with blobs and metadata", async () => {
-    const resource = samplePngResource();
+    const resourcePath = "./src/testing/resource/image.png";
+    const resource = samplePngResource(resourcePath);
 
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [resource] });
@@ -75,21 +45,23 @@ describe("Synchronizer.resource", () => {
     expect(remote.id).toBe(res.createdItems[0].id);
 
     // check if blob is available
-    const resourcePath = resourceRemotePath(res.createdItems[0].id);
-    const blob = await syncer.getItem({ path: resourcePath });
+    const blob = await syncer.getItem({
+      path: resourceRemotePath(res.createdItems[0].id),
+    });
     expect(!!blob).toBe(true);
   });
 
   it("should delete blobs and metadata", async () => {
-    const resource = samplePngResource();
+    const resourcePath = "./src/testing/resource/image.png";
+    const resource = samplePngResource(resourcePath);
 
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [resource] });
 
     // check if resource && blob available
     let remote = await syncer.getItem({ id: res.createdItems[0].id });
-    let resourcePath = resourceRemotePath(res.createdItems[0].id);
-    let blob = await syncer.getItem({ path: resourcePath });
+    let resRemotePath = resourceRemotePath(res.createdItems[0].id);
+    let blob = await syncer.getItem({ path: resRemotePath });
     expect(!!blob).toBe(true);
     expect(!!remote).toBe(true);
 
@@ -103,9 +75,80 @@ describe("Synchronizer.resource", () => {
 
     // check if resource && blob is deleted
     remote = await syncer.getItem({ id: res.createdItems[0].id });
-    resourcePath = resourceRemotePath(res.createdItems[0].id);
-    let blob2 = await syncer.getItem({ path: resourcePath });
+    resRemotePath = resourceRemotePath(res.createdItems[0].id);
+    let blob2 = await syncer.getItem({ path: resRemotePath });
     expect(!!remote).toBe(false);
     expect(!!blob2).toBe(false);
+  });
+
+  it("should upload/download resource with blob", async () => {
+    // prep payload
+    const resourcePath = "./src/testing/resource/image.png";
+    const resource = samplePngResource(resourcePath);
+
+    // upload
+    const syncer = synchronizer(1);
+    const res = await syncer.createItems({ items: [resource] });
+
+    // ensure resource metadata on remote
+    const remoteRes = await syncer.getItem({
+      id: res.createdItems[0].id,
+      unserializeItem: true,
+    });
+
+    expect(remoteRes.id).toBe(res.createdItems[0].id);
+
+    // download blob & compare
+    const localPath = "./temp/image.png";
+    await syncer.getBlob(res.createdItems[0].id, localPath);
+    expect(fs.readFileSync(localPath)).toEqual(fs.readFileSync(resourcePath));
+
+    // cleanup
+    fs.unlinkSync(localPath);
+    expect(fs.existsSync(localPath)).toBe(false);
+  });
+
+  it("should update blob data if specified", async () => {
+    // prep payload
+    const resourcePath1 = "./src/testing/resource/image.png";
+    const resourcePath2 = "./src/testing/resource/joplin-logo.png";
+    const resource1 = samplePngResource(resourcePath1);
+
+    // upload
+    const syncer = synchronizer(1);
+    const res = await syncer.createItems({ items: [resource1] });
+
+    // old blob should be same as path 1
+    const localPath = "./temp/image.png";
+    await syncer.getBlob(res.createdItems[0].id, localPath);
+    const item = await syncer.getItem({ id: res.createdItems[0].id });
+    const blob1 = fs.readFileSync(localPath);
+
+    expect(blob1).toEqual(fs.readFileSync(resourcePath1));
+
+    // update blob
+    await syncer.updateItem({
+      item: {
+        id: res.createdItems[0].id,
+        type_: BaseModel.TYPE_RESOURCE,
+        updateBlob: true,
+        localResourceContentPath: resourcePath2,
+      },
+      lastSync: res.createdItems[0].updated_time,
+    });
+
+    // new blob should be the same as path2
+    await syncer.getBlob(res.createdItems[0].id, localPath);
+    expect(fs.existsSync(localPath)).toBe(true);
+    const blob2 = fs.readFileSync(localPath);
+
+    expect(blob2).toEqual(fs.readFileSync(resourcePath2));
+
+    // 2 blob are different, despite fetched from same id
+    expect(blob1).not.toEqual(blob2);
+
+    // cleanup
+    fs.unlinkSync(localPath);
+    expect(fs.existsSync(localPath)).toBe(false);
   });
 });

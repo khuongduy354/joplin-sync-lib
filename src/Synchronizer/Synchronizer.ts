@@ -553,7 +553,8 @@ export default class Synchronizer {
   public async getBlob(id: string, outputPath: string) {
     try {
       await this.verifySyncInfo();
-      await this.apiCall("get", BaseItem.systemPath(id), {
+
+      await this.apiCall("get", resourceRemotePath(id), {
         target: "file",
         path: outputPath,
       });
@@ -637,12 +638,53 @@ export default class Synchronizer {
       const path = BaseItem.systemPath(itemId);
       const itemUploader = new ItemUploader(this.api(), this.apiCall);
 
+      // encryption
       const content = await serializeForSync(
         newItem,
         this.e2eInfo(),
         this.encryptionService()
       );
       await itemUploader.serializeAndUploadItem(path, newItem, content);
+
+      // update blob
+      if (
+        options.item.type_ == BaseModel.TYPE_RESOURCE &&
+        !!options.item.updateBlob
+      ) {
+        const remoteContentPath = resourceRemotePath(options.item.id);
+        const { path: localResourceContentPath, resource } =
+          await fullPathForSyncUpload(options.item, this.e2eInfo().e2ee); // will encryption if E2E is on, else it's the same path as user provided
+
+        if (!localResourceContentPath)
+          throw new Error("Local resource content path not specified");
+
+        if (!fs.existsSync(localResourceContentPath)) {
+          throw new Error(
+            "Blob not found in path: " + localResourceContentPath
+          );
+        }
+
+        if (!resource.size) {
+          resource.size = fs.statSync(localResourceContentPath).size;
+        }
+
+        if (resource.size >= 10 * 1000 * 1000) {
+          logger.warn(
+            `Uploading a large resource (resourceId: ${resource.id}, size:${resource.size} bytes) which may tie up the sync process.`
+          );
+        }
+
+        logger.info(
+          "Uploading resource from local path: ",
+          localResourceContentPath,
+          "to remote: ",
+          remoteContentPath
+        );
+        await this.apiCall("put", remoteContentPath, null, {
+          path: localResourceContentPath,
+          source: "file",
+        });
+      }
 
       // release lock
       if (syncLock) {
@@ -928,7 +970,6 @@ export default class Synchronizer {
           await this.apiCall("put", remoteContentPath, null, {
             path: localResourceContentPath,
             source: "file",
-            shareId: local.share_id,
           });
         } catch (error) {
           logger.error("Resource upload error: ", error);
