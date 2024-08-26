@@ -4,12 +4,17 @@ import {
   synchronizer,
 } from "../test-utils";
 import time from "../../helpers/time";
-import { createUUID, loadClasses } from "../../helpers/item";
+import {
+  addE2EInfoToSyncInfo,
+  createUUID,
+  loadClasses,
+} from "../../helpers/item";
 import EncryptionService, {
   EncryptionMethod,
 } from "@joplin/lib/services/e2ee/EncryptionService";
 import { SyncInfoValuePublicPrivateKeyPair } from "@joplin/lib/services/synchronizer/syncInfoUtils";
 import { Item } from "../../types/item";
+import { SyncInfo } from "../../Synchronizer/syncInfoUtils";
 
 describe("Synchronizer.e2ee", () => {
   beforeEach(async () => {
@@ -39,8 +44,8 @@ describe("Synchronizer.e2ee", () => {
     mk.id = createUUID();
     e2eService.loadMasterKey(mk, "123456");
 
-    // create e2e infos
-    const e2eLocalInfo = {
+    // create e2e info
+    const e2eInfo = {
       e2ee: true,
       ppk: {
         publicKey: "asd",
@@ -54,33 +59,20 @@ describe("Synchronizer.e2ee", () => {
       },
       activeMasterKeyId: mk.id,
     };
-    const e2eRemoteInfo = {
-      // remote format is a bit different
-      e2ee: { value: e2eLocalInfo.e2ee },
-      ppk: {
-        value: e2eLocalInfo.ppk,
-      },
-      activeMasterKeyId: {
-        value: mk.id,
-      },
-      masterKeys: [
-        {
-          id: mk.id,
-        },
-      ],
-    };
 
     // enable remote e2e
-    await syncer.api().put(
-      "info.json",
-      JSON.stringify({
-        version: 3,
-        ...e2eRemoteInfo,
-      })
-    );
+    let syncInfo = new SyncInfo();
+    syncInfo.version = 3;
+    await syncer
+      .api()
+      .put(
+        "info.json",
+        JSON.stringify(addE2EInfoToSyncInfo(e2eInfo, syncInfo))
+      );
+
     // enable local e2e
     syncer.setEncryptionService(e2eService);
-    const res = await syncer.setupE2E(e2eLocalInfo);
+    const res = await syncer.setupE2E(e2eInfo);
 
     // CREATE items, should be encrypted
     const note = {
@@ -133,7 +125,7 @@ describe("Synchronizer.e2ee", () => {
     e2eService.loadMasterKey(mk, "123456");
 
     // create e2e infos
-    const e2eLocalInfo = {
+    const e2eInfo = {
       e2ee: true,
       ppk: {
         publicKey: "asd",
@@ -147,34 +139,20 @@ describe("Synchronizer.e2ee", () => {
       },
       activeMasterKeyId: mk.id,
     };
-    const e2eRemoteInfo = {
-      // remote format is a bit different
-      e2ee: { value: e2eLocalInfo.e2ee },
-      ppk: {
-        value: e2eLocalInfo.ppk,
-      },
-      activeMasterKeyId: {
-        value: mk.id,
-      },
-      masterKeys: [
-        {
-          id: mk.id,
-        },
-      ],
-    };
 
     // enable remote e2e
-    await syncer.api().put(
-      "info.json",
-      JSON.stringify({
-        version: 3,
-        ...e2eRemoteInfo,
-      })
-    );
+    let syncInfo = new SyncInfo();
+    syncInfo.version = 3;
+    await syncer
+      .api()
+      .put(
+        "info.json",
+        JSON.stringify(addE2EInfoToSyncInfo(e2eInfo, syncInfo))
+      );
 
     // enable local e2e
     syncer.setEncryptionService(e2eService);
-    const res = await syncer.setupE2E(e2eLocalInfo);
+    const res = await syncer.setupE2E(e2eInfo);
 
     // update item, should be encrypted
     await syncer.updateItem({

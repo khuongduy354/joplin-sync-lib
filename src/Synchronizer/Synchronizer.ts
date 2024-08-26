@@ -137,6 +137,15 @@ export default class Synchronizer {
     return this.lockClientType_;
   }
 
+  public async initSyncInfo(version: number = 3) {
+    if (version !== 3) {
+      logger.error("Can only initialize sync version 3");
+      return false;
+    }
+    await this.migrationHandler().initSyncInfo3();
+    return true;
+  }
+
   public migrationHandler() {
     if (this.migrationHandler_) return this.migrationHandler_;
     this.migrationHandler_ = new MigrationHandler(
