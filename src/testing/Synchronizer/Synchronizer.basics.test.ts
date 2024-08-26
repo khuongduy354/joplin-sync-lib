@@ -5,8 +5,8 @@ import {
   synchronizer,
 } from "../test-utils";
 import time from "../../helpers/time";
-import { loadClasses } from "../../helpers/item";
-import { Item } from "../../types/item";
+import { createNote, loadClasses } from "../../helpers/item";
+import { CreateItem, Item } from "../../types/item";
 
 describe("Synchronizer.basics", () => {
   beforeEach(async () => {
@@ -27,13 +27,9 @@ describe("Synchronizer.basics", () => {
   });
 
   it("should upload/create and pull item", async () => {
-    const note = {
-      type_: 1,
-      id: "asds",
-      title: "un",
+    const note = createNote({
       parent_id: "parent id",
-      body: "body",
-    };
+    });
 
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [note] });
@@ -55,14 +51,13 @@ describe("Synchronizer.basics", () => {
   });
 
   it("should throw when upload conflicted items ids", async () => {
-    const note = {
-      type_: 1,
-      id: "asds",
-      overrideId: "this is the chosen id",
+    const note: CreateItem = createNote({
       title: "un",
       parent_id: "parent id",
       body: "body",
-    };
+    });
+
+    note.overrideId = "this is the chosen id";
 
     const syncer = synchronizer(1);
     const res1 = await syncer.createItems({ items: [note] });
@@ -74,29 +69,26 @@ describe("Synchronizer.basics", () => {
 
   it("should update remote items", async () => {
     const syncer = synchronizer(1);
-    const note = {
-      type_: 1,
-      id: "<id>",
-      title: "hello",
+    const note = createNote({
+      title: "hello 1",
       parent_id: "parent id",
       body: "body before update",
-    };
+    });
 
     const res = await syncer.createItems({ items: [note] });
 
-    const note2 = {
-      type_: 1,
-      id: res.createdItems[0].id,
+    const note2 = createNote({
       title: "hello 2",
       parent_id: "parent id",
       body: "body after update",
-    };
+    });
 
     const item = (await syncer.getItem({
       id: res.createdItems[0].id,
       unserializeItem: true,
     })) as Item;
 
+    note2.id = res.createdItems[0].id;
     const res2 = await syncer.updateItem({
       item: note2,
       lastSync: item.updated_time,
@@ -109,12 +101,9 @@ describe("Synchronizer.basics", () => {
 
   it("should pull all remote items metadata", async () => {
     // upload 1 note
-    const note = {
-      type_: 1,
-      id: "asds",
-      title: "un",
+    const note = createNote({
       parent_id: "parent id",
-    };
+    });
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [note] });
 
@@ -129,21 +118,17 @@ describe("Synchronizer.basics", () => {
 
   it("should pull remote items metadata based on delta algorithm", async () => {
     // upload 2 note
-    const note = {
-      type_: 1,
-      id: "asds",
+    const note = createNote({
       title: "un",
       parent_id: "parent id",
-      updated_time: time.IsoToUnixMs("2024-06-14T02:31:45.188Z"),
-    };
+    });
+    note.updated_time = time.IsoToUnixMs("2024-06-14T02:31:45.188Z");
 
-    const note2 = {
-      type_: 1,
-      id: "asds",
-      title: "un",
+    const note2 = createNote({
       parent_id: "parent id",
-      updated_time: time.IsoToUnixMs("2024-06-01T02:31:45.188Z"),
-    };
+    });
+    note2.updated_time = time.IsoToUnixMs("2024-06-01T02:31:45.188Z");
+
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [note, note2] });
 
@@ -163,13 +148,10 @@ describe("Synchronizer.basics", () => {
 
   it("should track deleted items in get items metadata with delta algorithm", async () => {
     // upload 1 note
-    const note1 = {
-      type_: 1,
-      id: "random",
-      title: "un",
+    const note1 = createNote({
       parent_id: "parent id",
-      updated_time: time.IsoToUnixMs("2024-06-14T02:31:45.188Z"),
-    };
+    });
+    note1.updated_time = time.IsoToUnixMs("2024-06-14T02:31:45.188Z");
 
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [note1] });
@@ -193,13 +175,11 @@ describe("Synchronizer.basics", () => {
 
   it("should delete remote items", async () => {
     // create 1 item
-    const note = {
-      type_: 1,
-      id: "asds",
+    const note = createNote({
       title: "un",
       parent_id: "parent id",
       body: "body",
-    };
+    });
 
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [note] });
@@ -221,13 +201,11 @@ describe("Synchronizer.basics", () => {
   });
 
   it("should pull multiple remote items", async () => {
-    const note = {
-      type_: 1,
-      id: "asds",
+    const note = createNote({
       title: "un",
       parent_id: "parent id",
       body: "body",
-    };
+    });
     let items = [];
     for (let i = 0; i < 10; i++) {
       const copy = { ...note };

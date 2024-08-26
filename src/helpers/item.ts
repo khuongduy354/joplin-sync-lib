@@ -10,40 +10,92 @@ import shim from "@joplin/lib/shim";
 import crypto from "crypto";
 import Setting, { AppType } from "@joplin/lib/models/Setting";
 import { Item } from "../types/item";
+import { SyncInfo } from "../Synchronizer/syncInfoUtils";
+import fs from "fs-extra";
+import { e2eInfo } from "../types/e2eInfo";
 
 // Providing functions to work with Joplin Models Structure
+
+function createBasicItem(type_: number): Item {
+  return {
+    id: createUUID(),
+    type_,
+  };
+}
+type createResourceInput = {
+  localResourceContentPath: string;
+  title?: string;
+  body?: string;
+};
+export const createResource = (i: createResourceInput): Item => {
+  const localResourceContentPath = path.resolve(i.localResourceContentPath);
+  let res = fs.statSync(localResourceContentPath);
+  if (!res)
+    throw new Error("Resource not exist in path: " + localResourceContentPath);
+
+  let basicItem = createBasicItem(4);
+  basicItem = {
+    ...basicItem,
+    ...{ localResourceContentPath, size: res.size },
+  };
+  return basicItem;
+};
+export function createNote(i: {
+  parent_id: string;
+  title?: string;
+  body?: string;
+}): Item {
+  let basicItem = createBasicItem(1);
+
+  i.title = !i.title ? "Untitled" : i.title;
+  i.body = i.body || "";
+
+  basicItem = {
+    ...basicItem,
+    ...{ title: i.title, body: i.body, parent_id: i.parent_id },
+  };
+
+  return basicItem;
+}
+
+// e2e info and syncInfo helpers
+export function addE2EInfoToSyncInfo(
+  e2eInfo: e2eInfo,
+  syncInfo: SyncInfo
+): SyncInfo {
+  // reformat info
+  const e2eRemoteInfo = {
+    e2ee: { value: e2eInfo.e2ee },
+    ppk: {
+      value: e2eInfo.ppk,
+    },
+    activeMasterKeyId: {
+      value: e2eInfo.activeMasterKeyId,
+    },
+    masterKeys: [
+      {
+        id: e2eInfo.activeMasterKeyId,
+      },
+    ],
+  };
+  return {
+    ...syncInfo.toObject(),
+    ...e2eRemoteInfo,
+  };
+}
+
+export function extractE2EInfoFromSyncInfo(syncInfo: SyncInfo): e2eInfo {
+  const e2eInfo = {
+    e2ee: syncInfo.e2ee,
+    ppk: syncInfo.ppk,
+    activeMasterKeyId: syncInfo.activeMasterKeyId,
+  };
+  return e2eInfo;
+}
 
 export function createUUID() {
   return v4().replace(/-/g, "");
 }
-export const samplePngResource = (localResourceContentPath: string): Item => {
-  localResourceContentPath = path.resolve(localResourceContentPath);
-  const sample = {
-    localResourceContentPath, // this is new, absolute path to resource
-    title: "image.png",
-    id: createUUID(),
-    mime: "image/png",
-    filename: "",
-    file_extension: "png",
-    encryption_cipher_text: "",
-    encryption_applied: 0,
-    encryption_blob_encrypted: 0, // switch to 1 for encrypted
-    size: 331388,
-    is_shared: 0,
-    share_id: "",
-    master_key_id: "",
-    user_data: "",
-    blob_updated_time: 1718332305188,
-    ocr_text: "",
-    ocr_details: "",
-    ocr_status: 0,
-    ocr_error: "",
-    type_: 4,
-  };
-
-  // item = { ...item, ...sample };
-  return sample;
-};
 export async function unserializeWithoutSQLite(content: string) {
   const lines = content.split("\n");
   let output: any = {};

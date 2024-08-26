@@ -7,7 +7,7 @@ import {
 import { loadClasses } from "../../helpers/item";
 import fs from "fs-extra";
 import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
-import { samplePngResource } from "../../helpers/item";
+import { createResource } from "../../helpers/item";
 import BaseModel from "@joplin/lib/BaseModel";
 import { Item } from "../../types/item";
 
@@ -31,7 +31,7 @@ describe("Synchronizer.resource", () => {
 
   it("should create new resource with blobs and metadata", async () => {
     const resourcePath = "./src/testing/resource/image.png";
-    const resource = samplePngResource(resourcePath);
+    const resource = createResource({ localResourceContentPath: resourcePath });
 
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [resource] });
@@ -56,7 +56,7 @@ describe("Synchronizer.resource", () => {
 
   it("should delete blobs and metadata", async () => {
     const resourcePath = "./src/testing/resource/image.png";
-    const resource = samplePngResource(resourcePath);
+    const resource = createResource({ localResourceContentPath: resourcePath });
 
     const syncer = synchronizer(1);
     const res = await syncer.createItems({ items: [resource] });
@@ -87,7 +87,7 @@ describe("Synchronizer.resource", () => {
   it("should upload/download resource with blob", async () => {
     // prep payload
     const resourcePath = "./src/testing/resource/image.png";
-    const resource = samplePngResource(resourcePath);
+    const resource = createResource({ localResourceContentPath: resourcePath });
 
     // upload
     const syncer = synchronizer(1);
@@ -115,7 +115,9 @@ describe("Synchronizer.resource", () => {
     // prep payload
     const resourcePath1 = "./src/testing/resource/image.png";
     const resourcePath2 = "./src/testing/resource/joplin-logo.png";
-    const resource1 = samplePngResource(resourcePath1);
+    const resource1 = createResource({
+      localResourceContentPath: resourcePath1,
+    });
 
     // upload
     const syncer = synchronizer(1);
