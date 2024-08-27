@@ -620,9 +620,9 @@ export default class Synchronizer {
 
       const updateTime = time.unixMs();
       const newItem = {
+        ...remoteItem,
         user_updated_time: updateTime,
         updated_time: updateTime,
-        ...remoteItem,
       };
       // limiting updateable fields
       for (let key of [
@@ -1042,8 +1042,5 @@ export default class Synchronizer {
     if (errorToThrow) throw errorToThrow;
 
     return { createdItems: doneItems, failedItems };
-  }
-  catch(err) {
-    throw err;
   }
 }

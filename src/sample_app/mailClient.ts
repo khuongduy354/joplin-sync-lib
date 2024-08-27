@@ -1,5 +1,5 @@
 import { FileSystemSyncTarget } from "../SyncTarget/FileSystemSyncTarget";
-import { createResource } from "../helpers/item";
+import { createNote, createResource } from "../helpers/item";
 
 function noteBuilder(title = "", body = "") {
   const sample = {
@@ -45,7 +45,11 @@ export async function mailClient(withAttachment = false) {
     // 1. Create payload
     const mailTitle = "This is an email";
     const mailBody = "This is the body of the email, blahblahblah ![image](:/)";
-    const note = noteBuilder(mailTitle, mailBody); // note is a plain Javascript object { id, title, body, ...}
+    const note = createNote({
+      title: mailTitle,
+      body: mailBody,
+      parent_id: "asdas",
+    }); // note is a plain Javascript object { id, title, body, ...}
     const items: any[] = [note];
     if (withAttachment) {
       let localResourceContentPath =

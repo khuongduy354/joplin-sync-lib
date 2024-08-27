@@ -1,16 +1,12 @@
-import { loadClasses } from "./helpers/item";
 import { mailClient } from "./sample_app/mailClient";
-import { newItemListernerDemo } from "./sample_app/newItemListener";
 import { OCRService } from "./sample_app/ocrService";
+import { newItemListernerDemo } from "./sample_app/newItemListener";
+import { itemUpdaterDemo } from "./sample_app/itemUpdaterDemo";
+import { loadClasses } from "./helpers/item";
 
 // driver code
 async function main() {
   loadClasses();
-
-  const withAttachment = true;
-  mailClient(withAttachment);
-  //  await OCRService();
-  // await newItemListernerDemo();
 }
 
 main();

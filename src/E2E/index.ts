@@ -5,6 +5,7 @@ import EncryptionService from "@joplin/lib/services/e2ee/EncryptionService";
 import { EncryptionMethod, e2eInfo } from "../types/e2eInfo";
 import { logger } from "../helpers/logger";
 
+// Provide helpers for encryption of items
 export async function serializeForSync(
   item: BaseItemEntity,
   e2eInfo: e2eInfo,

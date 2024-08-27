@@ -4,18 +4,15 @@ import {
   ResourceOcrStatus,
 } from "@joplin/lib/services/database/types";
 import Synchronizer from "../Synchronizer/Synchronizer";
+import { createResource } from "../helpers/item";
+import { Item } from "../types/item";
 
 async function createSampleResourceOnRemote(syncer: Synchronizer) {
   try {
     let localResourceContentPath =
       "./src/sample_app/Storage/resource/image.png";
     const res = await syncer.createItems({
-      items: [
-        {
-          type_: 4,
-          localResourceContentPath, // path to blob of resource
-        },
-      ],
+      items: [createResource({ localResourceContentPath })],
     });
     return res.createdItems[0];
   } catch (e) {
@@ -48,10 +45,10 @@ export async function OCRService() {
   const resourceId = (await createSampleResourceOnRemote(syncer)).id;
 
   // retrieve the resource
-  const resource = await syncer.getItem({
+  const resource = (await syncer.getItem({
     id: resourceId,
     unserializeItem: true,
-  });
+  })) as Item;
   if (resource.type_ !== 4) return console.log("Not a resource, skipping");
   console.log("\n\n");
   console.log("Resource before OCR: \n", resource);
@@ -59,6 +56,7 @@ export async function OCRService() {
   // update resource
   const toSave: ResourceEntity = {
     id: resourceId,
+    type_: 4,
   };
   toSave.ocr_status = ResourceOcrStatus.Done;
   toSave.ocr_text = "Processed ocr text"; // result.text;
@@ -66,6 +64,7 @@ export async function OCRService() {
   toSave.ocr_error = "";
 
   const updateResult = await syncer.updateItem({
+    //@ts-ignore
     item: toSave,
     lastSync: resource.updated_time, // only update if lastSync parameter exactly match resource.updated_time
   });
@@ -82,7 +81,5 @@ export async function OCRService() {
     console.log("Update conflicted, try again with the correct timestamp");
   }
 
-  // uncomment this for auto clean up in
-  // src/sample_app/Storage/fsSyncTarget/
-  // await cleanUp(syncer, resourceId);
+  await cleanUp(syncer, resourceId);
 }
