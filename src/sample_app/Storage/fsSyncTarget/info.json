@@ -1,0 +1,17 @@
+{
+	"version": 3,
+	"e2ee": {
+		"value": false,
+		"updatedTime": 0
+	},
+	"activeMasterKeyId": {
+		"value": "",
+		"updatedTime": 0
+	},
+	"masterKeys": [],
+	"ppk": {
+		"value": null,
+		"updatedTime": 0
+	},
+	"appMinVersion": "0.0.0"
+}
