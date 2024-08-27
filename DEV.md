@@ -50,8 +50,5 @@ const timestamp = time.IsoToUnixMs("ISO time string here") // time is in helpers
 const res = await syncer.getItemsMetadata({ context: { timestamp: timestamp } })    // return items metadata newer than timestamp, timestamp default to 0 (get all items metadata)  
 
 syncer.getItem({id: "item id", unserializeItem: false}) // get 1 single item, unserializeItem will determine if result is in JS object or string
-
-
-
 ```
 

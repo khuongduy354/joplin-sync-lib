@@ -13,22 +13,16 @@ export interface Item {
 
   encryption_applied?: number;
   encryption_cipher_text?: string;
+
+  // for blob
+  localResourceContentPath?: string;
+  size?: number;
+  updateBlob?: boolean;
 }
 export interface CreateItem extends Item {
   // for manually set fields
   overrideId?: string;
   overrideCreatedTime?: number;
-
-  // for blob
-  localResourceContentPath?: string;
-  size?: number;
-}
-
-export interface UpdateItem extends Item {
-  // for blob
-  localResourceContentPath?: string;
-  size?: number;
-  updateBlob?: boolean;
 }
 
 export interface DeltaItem extends Item {

@@ -1,6 +1,6 @@
 import { SyncInfo } from "../Synchronizer/syncInfoUtils";
 import { e2eInfo } from "./e2eInfo";
-import { CreateItem, DeltaItem, Item, UpdateItem } from "./item";
+import { CreateItem, DeltaItem, Item } from "./item";
 
 export type getItemsMetadataInput = {
   context: {
@@ -23,7 +23,7 @@ export type getItemInput = {
 export type getItemOutput = Item | string | null;
 
 export type updateItemInput = {
-  item: UpdateItem;
+  item: Item;
   lastSync: number; //timestamp in unixMs
 };
 
