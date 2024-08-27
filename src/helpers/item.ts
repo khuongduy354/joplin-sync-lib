@@ -7,7 +7,7 @@ import { v4 } from "uuid";
 import Note from "@joplin/lib/models/Note";
 //@ts-ignore
 import sjcl from "@joplin/lib/vendor/sjcl.js";
-const shim = require("@joplin/lib/shim");
+import shim from "@joplin/lib/shim";
 import crypto from "crypto";
 import Setting, { AppType } from "@joplin/lib/models/Setting";
 import { Item } from "../types/item";

@@ -1,5 +1,5 @@
 module.exports = {
-  // testMatch: ["**/*.test.js"],
+  testMatch: ["**/*.test.ts"],
 
   testPathIgnorePatterns: [
     "<rootDir>/node_modules/",
