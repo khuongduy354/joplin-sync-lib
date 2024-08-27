@@ -1,4 +1,4 @@
-import BaseModel from "@joplin/lib/BaseModel";
+import BaseModel, { ModelType } from "@joplin/lib/BaseModel";
 import BaseItem from "@joplin/lib/models/BaseItem";
 import Resource from "@joplin/lib/models/Resource";
 import path from "path";
@@ -13,6 +13,7 @@ import { Item } from "../types/item";
 import { SyncInfo } from "../Synchronizer/syncInfoUtils";
 import fs from "fs-extra";
 import { e2eInfo } from "../types/e2eInfo";
+import Database from "@joplin/lib/database";
 
 // Providing functions to work with Joplin Models Structure
 
@@ -96,6 +97,45 @@ export function extractE2EInfoFromSyncInfo(syncInfo: SyncInfo): e2eInfo {
 export function createUUID() {
   return v4().replace(/-/g, "");
 }
+
+function unserialize_format(type: ModelType, propName: string, propValue: any) {
+  if (propName[propName.length - 1] === "_") return propValue; // Private property
+
+  const ItemClass = BaseItem.itemClass(type);
+
+  if (["title_diff", "body_diff"].indexOf(propName) >= 0) {
+    if (!propValue) return "";
+    propValue = JSON.parse(propValue);
+  } else if (["longitude", "latitude", "altitude"].indexOf(propName) >= 0) {
+    const places = propName === "altitude" ? 4 : 8;
+    propValue = Number(propValue).toFixed(places);
+  } else {
+    if (
+      [
+        "created_time",
+        "updated_time",
+        "user_created_time",
+        "user_updated_time",
+      ].indexOf(propName) >= 0
+    ) {
+      console.log(propValue);
+      propValue = !propValue
+        ? "0"
+        : parseInt(moment(propValue, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("x"));
+    }
+  }
+  // propValue = Database.formatValue(ItemClass.fieldType(propName), propValue);
+
+  if (propName === "body") return propValue;
+
+  return typeof propValue === "string"
+    ? propValue
+        .replace(/\\n/g, "\n")
+        .replace(/\\r/g, "\r")
+        .replace(/\\\n/g, "\\n")
+        .replace(/\\\r/g, "\\r")
+    : propValue;
+}
 export async function unserializeWithoutSQLite(content: string) {
   const lines = content.split("\n");
   let output: any = {};
@@ -138,6 +178,10 @@ export async function unserializeWithoutSQLite(content: string) {
   const ItemClass = BaseItem.itemClass(output.type_);
   output = ItemClass.removeUnknownFields(output);
 
+  for (const n in output) {
+    if (!output.hasOwnProperty(n)) continue;
+    output[n] = await unserialize_format(output.type_, n, output[n]);
+  }
   return output;
 }
 

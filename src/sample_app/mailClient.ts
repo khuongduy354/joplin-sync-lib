@@ -1,5 +1,5 @@
 import { FileSystemSyncTarget } from "../SyncTarget/FileSystemSyncTarget";
-import { samplePngResource } from "../helpers/item";
+import { createResource } from "../helpers/item";
 
 function noteBuilder(title = "", body = "") {
   const sample = {
@@ -50,7 +50,7 @@ export async function mailClient(withAttachment = false) {
     if (withAttachment) {
       let localResourceContentPath =
         "./src/sample_app/Storage/resource/image.png";
-      const attachment = samplePngResource(localResourceContentPath);
+      const attachment = createResource({ localResourceContentPath });
       items.push(attachment);
     }
 
