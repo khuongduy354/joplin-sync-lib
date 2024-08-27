@@ -5,6 +5,7 @@ import { compareVersions } from "compare-versions";
 import JoplinError from "@joplin/lib/JoplinError";
 import { ErrorCode } from "@joplin/lib/errors";
 import { PublicPrivateKeyPair } from "@joplin/lib/services/e2ee/ppk";
+import { MasterKeyEntity } from "@joplin/lib/services/e2ee/types";
 const fastDeepEqual = require("fast-deep-equal");
 
 const logger = Logger.create("syncInfoUtils");
@@ -39,43 +40,6 @@ export const setAppMinVersion = (v: string) => {
   appMinVersion_ = v;
 };
 
-export async function migrateLocalSyncInfo(db: JoplinDatabase) {
-  if (Setting.value("syncInfoCache")) return; // Already initialized
-
-  // v3 to v4, v4 to v5, etc.
-
-  const masterKeys = await db.selectAll("SELECT * FROM master_keys");
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
-  const masterKeyMap: Record<string, any> = {};
-  for (const mk of masterKeys) masterKeyMap[mk.id] = mk;
-
-  const syncInfo = new SyncInfo();
-  syncInfo.version = Setting.value("syncVersion");
-  syncInfo.e2ee = Setting.valueNoThrow("encryption.enabled", false);
-  syncInfo.activeMasterKeyId = Setting.valueNoThrow(
-    "encryption.activeMasterKeyId",
-    ""
-  );
-  syncInfo.masterKeys = masterKeys;
-
-  // We set the timestamp to 0 because we don't know when the source setting
-  // has been set. That way, if the parameter is changed later on in any
-  // client, the new value will have higher priority. This is to handle this
-  // case:
-  //
-  // - Client 1 upgrade local sync target info (with E2EE = false)
-  // - Client 1 set E2EE to true
-  // - Client 2 upgrade local sync target info (with E2EE = false)
-  // - => If we don't set the timestamp to 0, the local value of client 2 will
-  //   have a higher timestamp and E2EE will get disabled, even though this is
-  //   most likely not what the user wants.
-  syncInfo.setKeyTimestamp("e2ee", 0);
-  syncInfo.setKeyTimestamp("activeMasterKeyId", 0);
-
-  await saveLocalSyncInfo(syncInfo);
-}
-
 export async function uploadSyncInfo(api: FileApi, syncInfo: SyncInfo) {
   await api.put("info.json", syncInfo.serialize());
 }
@@ -101,10 +65,6 @@ export async function fetchSyncInfo(api: FileApi): Promise<SyncInfo> {
   return fixSyncInfo(new SyncInfo(JSON.stringify(output)));
 }
 
-export function saveLocalSyncInfo(syncInfo: SyncInfo) {
-  Setting.setValue("syncInfoCache", syncInfo.serialize());
-}
-
 const fixSyncInfo = (syncInfo: SyncInfo) => {
   if (syncInfo.activeMasterKeyId) {
     if (
@@ -119,125 +79,6 @@ const fixSyncInfo = (syncInfo: SyncInfo) => {
   }
   return syncInfo;
 };
-
-export function localSyncInfo(): SyncInfo {
-  const output = new SyncInfo(Setting.value("syncInfoCache"));
-  output.appMinVersion = appMinVersion_;
-  return fixSyncInfo(output);
-}
-
-export function localSyncInfoFromState(state: State): SyncInfo {
-  return new SyncInfo(state.settings["syncInfoCache"]);
-}
-
-// When deciding which master key should be active we should take into account
-// whether it's been used or not. If it's been used before it should most likely
-// remain the active one, regardless of timestamps. This is because the extra
-// key was most likely created by mistake by the user, in particular in this
-// kind of scenario:
-//
-// - Client 1 setup sync with sync target
-// - Client 1 enable encryption
-// - Client 1 sync
-//
-// Then user 2 does the same:
-//
-// - Client 2 setup sync with sync target
-// - Client 2 enable encryption
-// - Client 2 sync
-//
-// The problem is that enabling encryption was not needed since it was already
-// done (and recorded in info.json) on the sync target. As a result an extra key
-// has been created and it has been set as the active one, but we shouldn't use
-// it. Instead the key created by client 1 should be used and made active again.
-//
-// And we can do this using the "hasBeenUsed" field which tells us which keys
-// has already been used to encrypt data. In this case, at the moment we compare
-// local and remote sync info (before synchronising the data), key1.hasBeenUsed
-// is true, but key2.hasBeenUsed is false.
-//
-// 2023-05-30: Additionally, if one key is enabled and the other is not, we
-// always pick the enabled one regardless of usage.
-const mergeActiveMasterKeys = (
-  s1: SyncInfo,
-  s2: SyncInfo,
-  output: SyncInfo
-) => {
-  const activeMasterKey1 = getActiveMasterKey(s1);
-  const activeMasterKey2 = getActiveMasterKey(s2);
-  let doDefaultAction = false;
-
-  if (activeMasterKey1 && activeMasterKey2) {
-    if (
-      masterKeyEnabled(activeMasterKey1) &&
-      !masterKeyEnabled(activeMasterKey2)
-    ) {
-      output.setWithTimestamp(s1, "activeMasterKeyId");
-    } else if (
-      !masterKeyEnabled(activeMasterKey1) &&
-      masterKeyEnabled(activeMasterKey2)
-    ) {
-      output.setWithTimestamp(s2, "activeMasterKeyId");
-    } else if (activeMasterKey1.hasBeenUsed && !activeMasterKey2.hasBeenUsed) {
-      output.setWithTimestamp(s1, "activeMasterKeyId");
-    } else if (!activeMasterKey1.hasBeenUsed && activeMasterKey2.hasBeenUsed) {
-      output.setWithTimestamp(s2, "activeMasterKeyId");
-    } else {
-      doDefaultAction = true;
-    }
-  } else {
-    doDefaultAction = true;
-  }
-
-  if (doDefaultAction) {
-    output.setWithTimestamp(
-      s1.keyTimestamp("activeMasterKeyId") >
-        s2.keyTimestamp("activeMasterKeyId")
-        ? s1
-        : s2,
-      "activeMasterKeyId"
-    );
-  }
-};
-
-// If there is a distinction, s1 should be local sync info and s2 remote.
-export function mergeSyncInfos(s1: SyncInfo, s2: SyncInfo): SyncInfo {
-  const output: SyncInfo = new SyncInfo();
-
-  output.setWithTimestamp(
-    s1.keyTimestamp("e2ee") > s2.keyTimestamp("e2ee") ? s1 : s2,
-    "e2ee"
-  );
-  output.setWithTimestamp(
-    s1.keyTimestamp("ppk") > s2.keyTimestamp("ppk") ? s1 : s2,
-    "ppk"
-  );
-  output.version = s1.version > s2.version ? s1.version : s2.version;
-
-  mergeActiveMasterKeys(s1, s2, output);
-
-  output.masterKeys = s1.masterKeys.slice();
-
-  for (const mk of s2.masterKeys) {
-    const idx = output.masterKeys.findIndex((m) => m.id === mk.id);
-    if (idx < 0) {
-      output.masterKeys.push(mk);
-    } else {
-      const mk2 = output.masterKeys[idx];
-      output.masterKeys[idx] = mk.updated_time > mk2.updated_time ? mk : mk2;
-    }
-  }
-
-  // We use >= so that the version from s1 (local) is preferred to the version in s2 (remote).
-  // For example, if s2 has appMinVersion 0.00 and s1 has appMinVersion 0.0.0, we choose the
-  // local version, 0.0.0.
-  output.appMinVersion =
-    compareVersions(s1.appMinVersion, s2.appMinVersion) >= 0
-      ? s1.appMinVersion
-      : s2.appMinVersion;
-
-  return output;
-}
 
 export function syncInfoEquals(s1: SyncInfo, s2: SyncInfo): boolean {
   return fastDeepEqual(s1.toObject(), s2.toObject());
@@ -410,89 +251,9 @@ export class SyncInfo {
 // Shortcuts to simplify the refactoring
 // ---------------------------------------------------------
 
-export function getEncryptionEnabled() {
-  return localSyncInfo().e2ee;
-}
-
-export function setEncryptionEnabled(v: boolean, activeMasterKeyId = "") {
-  const s = localSyncInfo();
-  s.e2ee = v;
-  if (activeMasterKeyId) s.activeMasterKeyId = activeMasterKeyId;
-  saveLocalSyncInfo(s);
-}
-
-export function getActiveMasterKeyId() {
-  return localSyncInfo().activeMasterKeyId;
-}
-
-export function setActiveMasterKeyId(id: string) {
-  const s = localSyncInfo();
-  s.activeMasterKeyId = id;
-  saveLocalSyncInfo(s);
-}
-
-export function getActiveMasterKey(s: SyncInfo = null): MasterKeyEntity | null {
-  s = s || localSyncInfo();
-  if (!s.activeMasterKeyId) return null;
-  return s.masterKeys.find((mk) => mk.id === s.activeMasterKeyId);
-}
-
-export function setMasterKeyEnabled(mkId: string, enabled = true) {
-  const s = localSyncInfo();
-  const idx = s.masterKeys.findIndex((mk) => mk.id === mkId);
-  if (idx < 0) throw new Error(`No such master key: ${mkId}`);
-
-  // Disabled for now as it's needed to disable even the main master key when the password has been forgotten
-  // https://discourse.joplinapp.org/t/syncing-error-with-joplin-cloud-and-e2ee-master-key-is-not-loaded/20115/5?u=laurent
-  //
-  // if (mkId === getActiveMasterKeyId() && !enabled) throw new Error('The active master key cannot be disabled');
-
-  s.masterKeys[idx] = {
-    ...s.masterKeys[idx],
-    enabled: enabled ? 1 : 0,
-    updated_time: Date.now(),
-  };
-
-  saveLocalSyncInfo(s);
-}
-
-export const setMasterKeyHasBeenUsed = (s: SyncInfo, mkId: string) => {
-  const idx = s.masterKeys.findIndex((mk) => mk.id === mkId);
-  if (idx < 0) throw new Error(`No such master key: ${mkId}`);
-
-  s.masterKeys[idx] = {
-    ...s.masterKeys[idx],
-    hasBeenUsed: true,
-    updated_time: Date.now(),
-  };
-
-  saveLocalSyncInfo(s);
-
-  return s;
-};
-
 export function masterKeyEnabled(mk: MasterKeyEntity): boolean {
   if ("enabled" in mk) return !!mk.enabled;
   return true;
-}
-
-export function addMasterKey(syncInfo: SyncInfo, masterKey: MasterKeyEntity) {
-  // Sanity check - because shouldn't happen
-  if (syncInfo.masterKeys.find((mk) => mk.id === masterKey.id))
-    throw new Error("Master key is already present");
-
-  syncInfo.masterKeys.push(masterKey);
-  saveLocalSyncInfo(syncInfo);
-}
-
-export function setPpk(ppk: PublicPrivateKeyPair) {
-  const syncInfo = localSyncInfo();
-  syncInfo.ppk = ppk;
-  saveLocalSyncInfo(syncInfo);
-}
-
-export function masterKeyById(id: string) {
-  return localSyncInfo().masterKeys.find((mk) => mk.id === id);
 }
 
 export const checkIfCanSync = (s: SyncInfo, appVersion: string) => {

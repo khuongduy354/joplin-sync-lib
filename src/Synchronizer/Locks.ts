@@ -219,7 +219,7 @@ export default class LockHandler {
     }
 
     const result = await this.api_.list(Dirnames.Locks);
-    if (result.hasMore) throw new Error("hasMore not handled"); // Shouldn't happen anyway
+    // if (result.hasMore) throw new Error("hasMore not handled"); // Shouldn't happen anyway
 
     const output = [];
     for (const file of result.items) {

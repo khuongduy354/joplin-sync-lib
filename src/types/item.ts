@@ -3,6 +3,8 @@ export interface Item {
   id: string;
   parent_id?: string;
   path?: string;
+  title?: string;
+  body?: string;
 
   created_time?: number;
   updated_time?: number;

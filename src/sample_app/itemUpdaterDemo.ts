@@ -1,4 +1,5 @@
 import { FileSystemSyncTarget } from "../SyncTarget/FileSystemSyncTarget";
+import { Item } from "../types/item";
 
 export async function itemUpdaterDemo() {
   try {
@@ -28,10 +29,10 @@ export async function itemUpdaterDemo() {
       body: "body after update",
     };
 
-    let item = await syncer.getItem({
+    let item = (await syncer.getItem({
       id: res.createdItems[0].id,
       unserializeItem: true,
-    });
+    })) as Item;
     console.log("item before update: ", item);
 
     const res2 = await syncer.updateItem({
@@ -40,12 +41,12 @@ export async function itemUpdaterDemo() {
     });
 
     // get updated note
-    item = await syncer.getItem({
+    let newItem = await syncer.getItem({
       id: res.createdItems[0].id,
       unserializeItem: true,
     });
 
-    console.log("updated item: ", item);
+    console.log("updated item: ", newItem);
   } catch (err) {
     console.error(err);
   }

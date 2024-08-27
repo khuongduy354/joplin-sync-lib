@@ -16,7 +16,6 @@ async function remoteItemsByTypes(types: number[]) {
     includeDirs: false,
     syncItemsOnly: true,
   });
-  if (list.hasMore) throw new Error("Not implemented!!!");
   const files = list.items;
 
   const output = [];

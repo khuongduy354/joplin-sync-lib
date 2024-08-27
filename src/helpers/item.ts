@@ -5,8 +5,9 @@ import path from "path";
 import moment from "moment";
 import { v4 } from "uuid";
 import Note from "@joplin/lib/models/Note";
+//@ts-ignore
 import sjcl from "@joplin/lib/vendor/sjcl.js";
-import shim from "@joplin/lib/shim";
+const shim = require("@joplin/lib/shim");
 import crypto from "crypto";
 import Setting, { AppType } from "@joplin/lib/models/Setting";
 import { Item } from "../types/item";
@@ -14,6 +15,7 @@ import { SyncInfo } from "../Synchronizer/syncInfoUtils";
 import fs from "fs-extra";
 import { e2eInfo } from "../types/e2eInfo";
 import Database from "@joplin/lib/database";
+import Folder from "@joplin/lib/models/Folder";
 
 // Providing functions to work with Joplin Models Structure
 
@@ -327,6 +329,25 @@ export function loadClasses() {
       "master_key_id",
     ];
   };
+
+  Folder.fieldNames = (withPrefix: boolean = false) => {
+    return [
+      "id",
+      "title",
+      "created_time",
+      "updated_time",
+      "user_updated_time",
+      "user_created_time",
+      "encryption_cipher_text",
+      "encryption_applied",
+      "parent_id",
+      "master_key_id",
+      "icon",
+      "user_data",
+      "deleted_time",
+      "type_",
+    ];
+  };
   // override some classes
   BaseItem.serialize = serializeModel;
   // BaseItem.serializeForSync = serializeForSync;
@@ -334,15 +355,16 @@ export function loadClasses() {
 
   BaseItem.loadClass("Note", Note);
   BaseItem.loadClass("Resource", Resource);
+  BaseItem.loadClass("Folder", Folder);
 
   // for encryption only
-  shim.randomBytes = async (count) => {
+  shim.randomBytes = async (count: number) => {
     const buffer = crypto.randomBytes(count);
     return Array.from(buffer);
   };
 
   shim.sjclModule = sjcl;
-  Setting.constants_.appId = "Sync API"; // TODO: separate app id ?
+  Setting.constants_.appId = "Sync API";
   Setting.constants_.appType = AppType.Desktop;
   shim.setTimeout = setTimeout;
   shim.waitForFrame = () => {};

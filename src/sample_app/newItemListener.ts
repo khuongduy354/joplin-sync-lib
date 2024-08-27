@@ -15,7 +15,7 @@ export async function newItemListernerDemo() {
 
   // create an item after 10 seconds
   setTimeout(async () => {
-    syncer.createItems({ items: [{ type_: 1, title: "New item" }] });
+    syncer.createItems({ items: [{ id: "any", type_: 1, title: "New item" }] });
   }, 10000);
 }
 async function newItemListener(syncer: Synchronizer, interval: number) {
