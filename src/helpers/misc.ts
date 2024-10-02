@@ -33,8 +33,12 @@ const binarySearch = function (items: any[], value: any) {
   // make sure it's the right value
   return items[middle] !== value ? -1 : middle;
 };
+const stringByteLength = function (inp: string) {
+  return Buffer.byteLength(inp, "utf-8");
+};
 
-export default {
+export const helperMisc = {
   objectToQueryString,
   binarySearch,
+  stringByteLength,
 };

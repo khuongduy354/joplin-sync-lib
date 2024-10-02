@@ -184,3 +184,11 @@ export const fetchBlob = async function (
 
   return doFetchOperation();
 };
+
+export const uploadBlob = async function (url: string, options: any) {
+  if (!options || !options.path)
+    throw new Error("uploadBlob: source file path is missing");
+  const content = await fs.readFile(options.path);
+  options = { ...options, body: content };
+  return fetch(url, options);
+};
