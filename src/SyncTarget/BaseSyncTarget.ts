@@ -35,6 +35,10 @@ export abstract class BaseSyncTarget {
     return "";
   }
 
+  public static supportsShare(): boolean {
+    return false;
+  }
+
   public static supportsSelfHosted(): boolean {
     return true;
   }
@@ -88,7 +92,10 @@ export abstract class BaseSyncTarget {
     throw new Error("initSynchronizer() not implemented");
   }
 
-  protected async initFileApi(syncPath: string): Promise<any> {
+  protected async initFileApi(
+    syncPath: string,
+    options: any = {}
+  ): Promise<any> {
     throw new Error("initFileApi() not implemented");
   }
 

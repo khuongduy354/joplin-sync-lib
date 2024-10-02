@@ -1,5 +1,5 @@
 import { singleton } from "../singleton";
-import helper from "../helpers/misc";
+import { helperMisc } from "../helpers/misc";
 import { isHidden } from "@joplin/utils/path";
 import { Lock, LockClientType, LockType } from "../Synchronizer/Locks";
 import BaseItem from "@joplin/lib/models/BaseItem";
@@ -570,7 +570,7 @@ async function basicDelta(
     for (let i = 0; i < itemIds.length; i++) {
       const itemId = itemIds[i];
 
-      if (helper.binarySearch(newContext.statIdsCache, itemId) < 0) {
+      if (helperMisc.binarySearch(newContext.statIdsCache, itemId) < 0) {
         deletedItems.push({
           path: BaseItem.systemPath(itemId),
           isDeleted: true,
