@@ -3,38 +3,35 @@ import { FileApi } from "../FileApi/FileApi";
 import { MemorySyncTarget } from "../SyncTarget/MemorySyncTarget";
 import FileApiDriverMemory from "../FileApi/Driver/FileApiMemoryDriver";
 import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
+import JoplinServerSyncTarget from "../SyncTarget/JoplinServerSyncTarget";
 
 let synchronizers_: Synchronizer[] = [];
 const fileApis_: Record<number, FileApi> = {};
 let currentClient_ = 1;
-let syncTargetId_: number = 1; // memory sync target id
+let currentSyncTargetId: number = MemorySyncTarget.id();
 
 function synchronizer(id: number = null) {
   if (id === null) id = currentClient_;
   return synchronizers_[id];
 }
 
-async function initFileApi() {
-  if (fileApis_[syncTargetId_]) return;
+// async function initFileApi() {
+//   if (fileApis_[syncTargetId_]) return;
 
-  // default is file memory sync target
-  const isNetworkSyncTarget_ = false;
-  const fileApi = new FileApi("/root", new FileApiDriverMemory());
+//   // default is file memory sync target
+//   const isNetworkSyncTarget_ = false;
+//   const fileApi = new FileApi("/root", new FileApiDriverMemory());
 
-  fileApi.setLogger(console);
-  fileApi.setSyncTargetId(syncTargetId_);
-  fileApi.setTempDirName(Dirnames.Temp);
+//   fileApi.requestRepeatCount_ = isNetworkSyncTarget_ ? 1 : 0;
 
-  fileApi.requestRepeatCount_ = isNetworkSyncTarget_ ? 1 : 0;
-
-  fileApis_[syncTargetId_] = fileApi;
-}
+//   fileApis_[syncTargetId_] = fileApi;
+// }
 
 function fileApi() {
-  return fileApis_[syncTargetId_];
+  return fileApis_[currentSyncTargetId];
 }
 
-async function setupDatabaseAndSynchronizer(id: number, options: any = null) {
+async function setupDatabaseAndSynchronizer(id: number, options: any = {}) {
   if (id === null) id = currentClient_;
 
   // BaseService.logger_ = logger;
@@ -50,18 +47,35 @@ async function setupDatabaseAndSynchronizer(id: number, options: any = null) {
   // await fs.remove(pluginDir(id));
   // await fs.mkdirp(pluginDir(id));
 
+  currentSyncTargetId = options.syncTargetId || currentSyncTargetId;
   if (!synchronizers_[id]) {
     // default is file memory sync target
     // const SyncTargetClass = SyncTargetRegistry.classById(syncTargetId_);
     // const syncTarget = new SyncTargetClass(db(id));
-
-    // memory sync target as default testing
-    const syncTarget = new MemorySyncTarget(null);
-    await initFileApi();
-    // await initFileApi();
-    syncTarget.setFileApi(fileApi());
-    // syncTarget.setLogger(logger);
-    synchronizers_[id] = await syncTarget.synchronizer();
+    let syncTargetId_ = currentSyncTargetId;
+    if (syncTargetId_ === 9) {
+      // JoplinServer
+      const syncTarget = new JoplinServerSyncTarget(null);
+      const options = {
+        username: () => "admin@localhost",
+        password: () => "admin",
+        path: () => "http://localhost:22300",
+        userContentPath: () => "http://localhost:22300",
+      };
+      const fileApi = await syncTarget.initFileApi(options);
+      if (!fileApis_[syncTargetId_]) fileApis_[syncTargetId_] = fileApi;
+      const syncer = await syncTarget.synchronizer();
+      synchronizers_[id] = syncer;
+    } else if (syncTargetId_ === 2) {
+      // Filesystem
+    } else {
+      // memory sync target as default testing
+      const syncTarget = new MemorySyncTarget(null);
+      const fileApi = await syncTarget.initFileApi();
+      if (!fileApis_[syncTargetId_]) fileApis_[syncTargetId_] = fileApi;
+      const syncer = await syncTarget.synchronizer();
+      synchronizers_[id] = syncer;
+    }
 
     // For now unset the share service as it's not properly initialised.
     // Share service tests are in ShareService.test.ts normally, and if it

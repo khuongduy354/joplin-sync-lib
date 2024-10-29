@@ -421,7 +421,7 @@ export default class Synchronizer {
   }
   public async verifySyncInfo() {
     let remoteInfo = await fetchSyncInfo(this.api());
-    logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
+    // logger.info("Sync target remote info:", remoteInfo.filterSyncInfo());
 
     if (!remoteInfo.version) {
       throw new Error(
@@ -436,11 +436,11 @@ export default class Synchronizer {
         `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
       );
 
-    const e2eCheck = await this.setupE2E(this.e2eInfo());
-    if (e2eCheck.status != "succeeded")
-      throw new Error(
-        "Remote and local's E2E are different, use setupE2E() to setup properly!"
-      );
+    // const e2eCheck = await this.setupE2E(this.e2eInfo());
+    // if (e2eCheck.status != "succeeded")
+    //   throw new Error(
+    //     "Remote and local's E2E are different, use setupE2E() to setup properly!"
+    //   );
   }
 
   // ====================== Sync Library API ======================

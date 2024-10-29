@@ -92,12 +92,12 @@ export abstract class BaseSyncTarget {
     throw new Error("initSynchronizer() not implemented");
   }
 
-  protected async initFileApi(
-    syncPath: string,
-    options: any = {}
-  ): Promise<any> {
-    throw new Error("initFileApi() not implemented");
-  }
+  // protected async initFileApi(
+  //   syncPath: string,
+  //   options: any = {}
+  // ): Promise<any> {
+  //   throw new Error("initFileApi() not implemented");
+  // }
 
   public async fileApi() {
     if (this.fileApi_) {

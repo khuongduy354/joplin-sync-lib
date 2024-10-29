@@ -22,11 +22,8 @@ describe("Synchronizer.e2ee", () => {
     await setupDatabaseAndSynchronizer(1);
     await setupDatabaseAndSynchronizer(2);
 
-    console.log("initializing sync info version 3...");
-    await synchronizer(1).migrationHandler().initSyncInfo3();
-    await synchronizer(2).migrationHandler().initSyncInfo3();
-
-    console.log("finished initializing sync info version 3");
+    await synchronizer(1).initSyncInfo();
+    await synchronizer(2).initSyncInfo();
   });
 
   afterAll(async () => {

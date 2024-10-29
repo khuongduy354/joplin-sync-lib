@@ -17,11 +17,9 @@ describe("Synchronizer.resource", () => {
     await setupDatabaseAndSynchronizer(1);
     await setupDatabaseAndSynchronizer(2);
 
-    console.log("initializing sync info version 3...");
-    const migrationHandler1 = synchronizer(1).migrationHandler();
-    await migrationHandler1.initSyncInfo3();
+   await synchronizer(1).initSyncInfo();
+   await synchronizer(2).initSyncInfo(); 
 
-    console.log("finished initializing sync info version 3");
     synchronizer().testingHooks_ = [];
   });
 

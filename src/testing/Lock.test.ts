@@ -43,12 +43,9 @@ describe("synchronizer_LockHandler", () => {
     lockHandler_ = null;
     await setupDatabaseAndSynchronizer(1);
     await setupDatabaseAndSynchronizer(2);
-    // await switchClient(1);
 
-    // Need to sync once to setup the sync target and allow locks to work
-    // await synchronizer().start();
-    const migrationHandler1 = synchronizer(1).migrationHandler();
-    await migrationHandler1.initSyncInfo3();
+    await synchronizer(1).initSyncInfo();
+    await synchronizer(2).initSyncInfo();
     // logger.setLevel(Logger.LEVEL_DEBUG);
   });
 

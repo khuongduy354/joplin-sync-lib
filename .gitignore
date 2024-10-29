@@ -1,3 +1,6 @@
 node_modules
-sample_profile_directory
+sample_profile_directory 
 dist
+localdev.md 
+.env
+localdev

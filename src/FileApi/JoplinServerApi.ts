@@ -1,11 +1,11 @@
 import { singleton } from "../singleton";
 // import { _ } from "./locale";
-import shim from "@joplin/lib/shim";
-const { rtrimSlashes } = require("./path-utils.js");
+// import shim from "@joplin/lib/shim";
+import { rtrimSlashes } from "@joplin/lib/path-utils";
 import JoplinError from "@joplin/lib/JoplinError";
 import { Env } from "@joplin/lib/models/Setting";
 import { helperMisc } from "../helpers/misc";
-import { uploadBlob } from "../helpers/fetchBlob";
+import { fetchBlob, uploadBlob } from "../helpers/fetchBlob";
 // import Logger from "@joplin/utils/Logger";
 // import personalizedUserContentBaseUrl from "./services/joplinServer/personalizedUserContentBaseUrl";
 // import { getHttpStatusMessage } from "./net-utils";
@@ -249,10 +249,10 @@ export default class JoplinServerApi {
           fetchOptions.headers[
             "Content-Length"
           ] = `${helperMisc.stringByteLength(body)}`;
-        response = await shim.fetch(url, fetchOptions);
+        response = await fetch(url, fetchOptions);
       } else {
         // file
-        response = await shim.fetchBlob(url, fetchOptions);
+        response = await fetchBlob(url, fetchOptions);
       }
 
       const responseText = await response.text();

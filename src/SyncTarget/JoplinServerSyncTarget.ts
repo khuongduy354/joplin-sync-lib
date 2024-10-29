@@ -46,7 +46,7 @@ export async function initFileApi(
   return fileApi;
 }
 
-export default class SyncTargetJoplinServer extends BaseSyncTarget {
+export default class JoplinServerSyncTarget extends BaseSyncTarget {
   public static id() {
     return 9;
   }
@@ -93,7 +93,7 @@ export default class SyncTargetJoplinServer extends BaseSyncTarget {
     };
 
     syncTargetId =
-      syncTargetId === null ? SyncTargetJoplinServer.id() : syncTargetId;
+      syncTargetId === null ? JoplinServerSyncTarget.id() : syncTargetId;
 
     let fileApi = null;
     try {
@@ -145,14 +145,19 @@ export default class SyncTargetJoplinServer extends BaseSyncTarget {
     return output;
   }
 
-  protected async initFileApi(syncPath: string, options: FileApiOptions) {
+  public async initFileApi(options: FileApiOptions) {
     //TODO: users setting
-    return initFileApi(SyncTargetJoplinServer.id(), this.logger(), {
-      path: () => options.path(),
-      userContentPath: () => options.userContentPath(),
-      username: () => options.username(),
-      password: () => options.password(),
-    });
+    this.fileApi_ = await initFileApi(
+      JoplinServerSyncTarget.id(),
+      this.logger(),
+      {
+        path: () => options.path(),
+        userContentPath: () => options.userContentPath(),
+        username: () => options.username(),
+        password: () => options.password(),
+      }
+    );
+    return this.fileApi();
   }
 
   protected async initSynchronizer() {
