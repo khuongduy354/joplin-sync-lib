@@ -19,22 +19,27 @@ async function main() {
     };
     await syncTarget.initFileApi(options);
     const syncer = await syncTarget.synchronizer();
-    await syncer.initSyncInfo();
-    const res = await syncer.createItems({
-      items: [
-        {
-          title: "test",
-          body: "test",
-          type_: 1,
-          overrideId: "test",
-          id: "test",
-          parent_id: "abcxyz",
-        },
-      ],
-    });
+    // await syncer.initSyncInfo();
+
+    // const res = await syncer.createItems({
+    //   items: [
+    //     {
+    //       title: "test",
+    //       body: "test",
+    //       type_: 1,
+    //       overrideId: "test",
+    //       id: "test",
+    //       parent_id: "abcxyz",
+    //     },
+    //   ],
+    // });
+    // console.log(res);
+    // const items = await syncer.getItem({ id: "test" });
+    // console.log(items);
+
+    const res = await syncer.api().releaseLock(1, 2, "111");
     console.log(res);
-    const items = await syncer.getItem({ id: "test" });
-    console.log(items);
+    console.log("lock released");
   } catch (e) {
     console.error(e);
   }

@@ -25,7 +25,7 @@ let lockHandler_: LockHandler = null;
 
 function newLockHandler(
   options: LockHandlerOptions = null,
-  id: number = 1
+  id: number = 3
 ): LockHandler {
   const fileApi = synchronizer(id).api();
   return new LockHandler(fileApi, options);
@@ -41,12 +41,25 @@ describe("synchronizer_LockHandler", () => {
   beforeEach(async () => {
     // logger.setLevel(Logger.LEVEL_WARN);
     lockHandler_ = null;
-    await setupDatabaseAndSynchronizer(1);
-    await setupDatabaseAndSynchronizer(2);
+    await setupDatabaseAndSynchronizer(3);
+    // await setupDatabaseAndSynchronizer(2);
 
-    await synchronizer(1).initSyncInfo();
-    await synchronizer(2).initSyncInfo();
+    // await synchronizer(3).initSyncInfo();
+    // await synchronizer(2).initSyncInfo();
     // logger.setLevel(Logger.LEVEL_DEBUG);
+  });
+
+  afterAll(async () => {
+    // release all locks
+    const locks = await lockHandler().locks();
+    for (const lock of locks) {
+      await lockHandler().releaseLock(
+        lock.type,
+        lock.clientType,
+        lock.clientId
+      );
+    }
+    expect((await lockHandler().locks()).length).toBe(0);
   });
 
   it("should acquire and release a sync lock", async () => {
@@ -71,7 +84,7 @@ describe("synchronizer_LockHandler", () => {
 
   it("should not use files that are not locks", async () => {
     if (lockHandler().useBuiltInLocks) return; // Doesn't make sense with built-in locks
-    const fileApi = synchronizer(1).api();
+    const fileApi = synchronizer(3).api();
 
     // Note: desktop.ini is blocked by Dropbox
     fileApi.put("locks/desktop.test.ini", "a");
@@ -119,6 +132,15 @@ describe("synchronizer_LockHandler", () => {
       expect(locks.length).toBe(1);
       expect(locks[0].clientId).toBe("111");
     }
+    // // cleanup
+    // await lockHandler().releaseLock(
+    //   LockType.Sync,
+    //   LockClientType.Mobile,
+    //   "111"
+    // );
+
+    // // no locks left
+    // expect((await lockHandler().locks(LockType.Sync)).length).toBe(0);
   });
 
   it("should auto-refresh a lock", async () => {
@@ -150,6 +172,11 @@ describe("synchronizer_LockHandler", () => {
     );
     expect(lockAfter.updatedTime).toBeGreaterThan(lockBefore.updatedTime);
     handler.stopAutoLockRefresh(lock);
+    // await lockHandler().releaseLock(
+    //   LockType.Sync,
+    //   LockClientType.Desktop,
+    //   "111"
+    // );
   });
 
   it("should call the error handler when lock has expired while being auto-refreshed", async () => {
