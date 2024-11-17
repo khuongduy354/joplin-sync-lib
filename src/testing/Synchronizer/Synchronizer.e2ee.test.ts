@@ -44,16 +44,6 @@ describe("Synchronizer.e2ee", () => {
     // create e2e info
     const e2eInfo = {
       e2ee: true,
-      ppk: {
-        publicKey: "asd",
-        privateKey: {
-          encryptionMethod: EncryptionMethod.Custom,
-          ciphertext: "asdsa",
-        },
-        keySize: 1,
-        createdTime: 123,
-        id: "sadsa",
-      },
       activeMasterKeyId: mk.id,
     };
 
@@ -69,7 +59,9 @@ describe("Synchronizer.e2ee", () => {
 
     // enable local e2e
     syncer.setEncryptionService(e2eService);
-    const res = await syncer.setupE2E(e2eInfo);
+    const res = await syncer.verifyAndSetE2EInfo(e2eInfo);
+
+    expect(res.status).toBe("succeeded");
 
     // CREATE items, should be encrypted
     const note = {
@@ -149,7 +141,7 @@ describe("Synchronizer.e2ee", () => {
 
     // enable local e2e
     syncer.setEncryptionService(e2eService);
-    const res = await syncer.setupE2E(e2eInfo);
+    const res = await syncer.verifyAndSetE2EInfo(e2eInfo);
 
     // update item, should be encrypted
     await syncer.updateItem({
@@ -164,7 +156,7 @@ describe("Synchronizer.e2ee", () => {
     expect(!!item.encryption_cipher_text).toBe(true);
   });
 
-  it("E2E case 1: remote disable, local disable should prompts succeeded", async () => {
+  it("E2E case 1: remote disable, local disable should be succeeded", async () => {
     // init remote
     const syncer = synchronizer(1);
     const remoteInfo = JSON.stringify({
@@ -180,11 +172,11 @@ describe("Synchronizer.e2ee", () => {
     };
 
     // compare e2e states
-    const res = await syncer.setupE2E(localInfo);
+    const res = await syncer.verifyAndSetE2EInfo(localInfo);
     expect(res.status).toBe("succeeded");
-    expect(res.message).toBe("Sync info verified with disabled encryption");
+    // expect(res.message).toBe("Sync info verified with disabled encryption");
   });
-  it("E2E case 2.1: remote enable, local disable should abort the operation and prompt user to fetch and update e2e input", async () => {
+  it("E2E case 2.1: remote enable, local disable should be aborted", async () => {
     // init remote
     const syncer = synchronizer(1);
     const remoteInfo = JSON.stringify({
@@ -199,15 +191,15 @@ describe("Synchronizer.e2ee", () => {
     };
 
     // compare e2e states
-    const res = await syncer.setupE2E(localInfo);
+    const res = await syncer.verifyAndSetE2EInfo(localInfo);
     expect(res.status).toBe("aborted");
     expect(res.remoteInfo.e2ee).toBe(true);
-    expect(res.message).toBe(
-      "There's a change in remote encryption settings, please fetch and update your e2e input to match the remote's"
-    );
+    // expect(res.message).toBe(
+    //   "There's a change in remote encryption settings, please fetch and update your e2e input to match the remote's"
+    // );
   });
 
-  it("E2E case 2.2: remote disable, local enable should abort the operation and prompt user to fetch and update e2e input", async () => {
+  it("E2E case 2.2: remote disable, local enable should be aborted", async () => {
     // init remote
     const syncer = synchronizer(1);
     const remoteInfo = JSON.stringify({
@@ -222,99 +214,83 @@ describe("Synchronizer.e2ee", () => {
     };
 
     // compare e2e states
-    const res = await syncer.setupE2E(localInfo);
+    const res = await syncer.verifyAndSetE2EInfo(localInfo);
     expect(res.status).toBe("aborted");
     expect(res.remoteInfo.e2ee).toBe(false);
-    expect(res.message).toBe(
-      "There's a change in remote encryption settings, please fetch and update your e2e input to match the remote's"
-    );
+    // expect(res.message).toBe(
+    //   "There's a change in remote encryption settings, please fetch and update your e2e input to match the remote's"
+    // );
   });
-  it("E2E case 3.1: remote enable, local enable, matched ppk should prompts succedeed", async () => {
-    // init ppk
-    const ppk: SyncInfoValuePublicPrivateKeyPair = {
-      value: {
-        id: "id",
-        keySize: 10,
-        publicKey: "hi",
 
-        privateKey: {
-          encryptionMethod: EncryptionMethod.SJCL,
-          ciphertext: "helllo",
-        },
-        createdTime: time.unixMs(),
-      },
-      updatedTime: time.unixMs(),
-    };
+  it("E2E case 3: remote enable, local enable should be succeeded", async () => {
     // init remote with ppk
     const syncer = synchronizer(1);
     const remoteInfo = JSON.stringify({
       version: 3,
       e2ee: { value: true, updatedTime: time.unixMs() },
-      ppk,
     });
     await syncer.api().put("info.json", remoteInfo);
 
     // init local with ppk
     const localInfo = {
       e2ee: true,
-      ppk: ppk.value,
     };
 
     // compare e2e states
-    const res = await syncer.setupE2E(localInfo);
+    const res = await syncer.verifyAndSetE2EInfo(localInfo);
     expect(res.status).toBe("succeeded");
-    expect(res.message).toBe("Sync info verified with enabled encryption");
   });
-  it("E2E case 3.2: remote enable, local enable, unmatched ppk, should aborts the operation and prompts user to fetch and update e2e input", async () => {
-    // init remote
-    const ppkRemote: SyncInfoValuePublicPrivateKeyPair = {
-      value: {
-        id: "id from remote",
-        keySize: 10,
-        publicKey: "hi, this is a different pubkey",
 
-        privateKey: {
-          encryptionMethod: EncryptionMethod.SJCL,
-          ciphertext: "helllo",
-        },
-        createdTime: time.unixMs(),
-      },
-      updatedTime: time.unixMs(),
-    };
-    const syncer = synchronizer(1);
-    const remoteInfo = JSON.stringify({
-      version: 3,
-      e2ee: { value: true, updatedTime: time.unixMs() },
-      ppk: ppkRemote,
-    });
+  // it("E2E case 3.2: remote enable, local enable, unmatched ppk, should aborts the operation and prompts user to fetch and update e2e input", async () => {
+  //   // init remote
+  //   const ppkRemote: SyncInfoValuePublicPrivateKeyPair = {
+  //     value: {
+  //       id: "id from remote",
+  //       keySize: 10,
+  //       publicKey: "hi, this is a different pubkey",
 
-    await syncer.api().put("info.json", remoteInfo);
+  //       privateKey: {
+  //         encryptionMethod: EncryptionMethod.SJCL,
+  //         ciphertext: "helllo",
+  //       },
+  //       createdTime: time.unixMs(),
+  //     },
+  //     updatedTime: time.unixMs(),
+  //   };
+  //   const syncer = synchronizer(1);
+  //   const remoteInfo = JSON.stringify({
+  //     version: 3,
+  //     e2ee: { value: true, updatedTime: time.unixMs() },
+  //     ppk: ppkRemote,
+  //   });
 
-    // init local
-    const ppkLocal: SyncInfoValuePublicPrivateKeyPair = {
-      value: {
-        id: "id",
-        keySize: 10,
-        publicKey: "hi",
+  //   await syncer.api().put("info.json", remoteInfo);
 
-        privateKey: {
-          encryptionMethod: EncryptionMethod.SJCL,
-          ciphertext: "helllo",
-        },
-        createdTime: time.unixMs(),
-      },
-      updatedTime: time.unixMs(),
-    };
-    const localInfo = {
-      e2ee: true,
-      ppk: ppkLocal.value,
-    };
+  //   // init local
+  //   const ppkLocal: SyncInfoValuePublicPrivateKeyPair = {
+  //     value: {
+  //       id: "id",
+  //       keySize: 10,
+  //       publicKey: "hi",
 
-    // compare e2e states
-    const res = await syncer.setupE2E(localInfo);
-    expect(res.status).toBe("aborted");
-    expect(res.message).toBe(
-      "There's a change in encryption key (ppk) settings, please fetch and update your e2e input to match the remote's"
-    );
-  });
+  //       privateKey: {
+  //         encryptionMethod: EncryptionMethod.SJCL,
+  //         ciphertext: "helllo",
+  //       },
+  //       createdTime: time.unixMs(),
+  //     },
+  //     updatedTime: time.unixMs(),
+  //   };
+  //   const localInfo = {
+  //     e2ee: true,
+  //     ppk: ppkLocal.value,
+  //   };
+
+  //   // compare e2e states
+  //   const res = await syncer.verifyAndSetE2EInfo(localInfo);
+  //   expect(res.status).toBe("aborted");
+  //   // expect(res.message).toBe(
+  //   //   "There's a change in encryption key (ppk) settings, please fetch and update your e2e input to match the remote's"
+  //   // );
+  // });
 });

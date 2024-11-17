@@ -38,7 +38,7 @@ import {
   getItemsMetadataInput,
   getItemsMetadataOutput,
   getItemsOutput,
-  setupE2EOutput,
+  verifyAndSetE2EInfoOutput,
   updateItemInput,
   updateItemOutput,
 } from "../types/apiIO";
@@ -343,81 +343,115 @@ export default class Synchronizer {
     }
   }
 
-  public async setupE2E(localE2E: e2eInfo): Promise<setupE2EOutput> {
-    // ===================== E2E =====================
-
-    let previousE2EE = false;
-    if (localE2E === undefined || localE2E.e2ee === undefined) {
+  public async verifyAndSetE2EInfo(
+    localE2EInfo: e2eInfo
+  ): Promise<verifyAndSetE2EInfoOutput> {
+    // validate e2e info (set by user)
+    let localE2Ee = false;
+    let localActiveMasterKeyId = null;
+    if (localE2EInfo === undefined) {
       logger.info(
         "No E2E info provided by client, assuming client E2E is disabled..."
       );
     } else {
-      previousE2EE = !!localE2E.e2ee;
+      localE2Ee = !!localE2EInfo.e2ee;
+      localActiveMasterKeyId = localE2EInfo.activeMasterKeyId || null;
     }
 
-    let remoteInfo = await fetchSyncInfo(this.api());
-    if (remoteInfo.e2ee !== previousE2EE) {
-      // There's a change in encryption setup between local and remote
-      logger.warn("Encryption mismatched changed between local and remote");
+    // fetch remote sync info
+    const remoteInfo = await fetchSyncInfo(this.api());
+    const remoteActiveMK = ["", null, undefined].includes(
+      remoteInfo.activeMasterKeyId
+    )
+      ? null
+      : remoteInfo.activeMasterKeyId;
+
+    // compare remote and local e2e info
+    const e2eeMismatched = !!remoteInfo.e2ee !== localE2Ee;
+    const activeMasterKeyIdMismatched =
+      remoteActiveMK !== localActiveMasterKeyId;
+    if (e2eeMismatched || activeMasterKeyIdMismatched) {
+      logger.warn(
+        "Synchronizer.verifyAndSetE2EInfo: Encryption mismatched!: ",
+        e2eeMismatched,
+        activeMasterKeyIdMismatched
+      );
+      logger.warn("rmeote info: ", remoteInfo);
+      logger.warn("Remote E2Ee : ", remoteInfo.e2ee);
+      logger.warn("remote active mk : ", remoteInfo.activeMasterKeyId);
+      logger.warn("Local E2E info: ", localE2EInfo);
+
       return {
         status: "aborted",
-        message:
-          "There's a change in remote encryption settings, please fetch and update your e2e input to match the remote's",
+        message: e2eeMismatched
+          ? "E2E mismatched\n"
+          : "" + activeMasterKeyIdMismatched
+          ? "Master key mismatched\n"
+          : "" +
+            "Use Synchronizer.verifyAndSetE2EInfo() to setup E2E properly with the returned remoteInfo below: ",
         remoteInfo, // use this to reconfigure client
       };
-    } else {
-      // There's no change both sides
-
-      if (!remoteInfo.e2ee) {
-        // both disable E2E
-
-        // set encryption to disable
-        this.setE2EInfo({
-          e2ee: false,
-          ppk: null,
-          activeMasterKeyId: null,
-        });
-
-        logger.info(
-          "Both client and remote disabled E2E, disabling encryption..."
-        );
-        return {
-          status: "succeeded",
-          message: "Sync info verified with disabled encryption",
-          e2eInfo: this.e2eInfo(),
-        };
-      } else {
-        // both enable E2E, check if they have the same PPK
-        console.log("remote info before check: ", remoteInfo);
-        if (remoteInfo.ppk.id !== localE2E.ppk.id) {
-          logger.warn("Encryption mismatched changed between local and remote");
-          return {
-            status: "aborted",
-            message:
-              "There's a change in encryption key (ppk) settings, please fetch and update your e2e input to match the remote's",
-            remoteInfo,
-          };
-        }
-
-        // else enable encryption
-        logger.info(
-          "Both client and remote enabled E2E with matched ppk, setting activeMasterKeyId on client..."
-        );
-
-        this.setE2EInfo({
-          e2ee: true,
-          ppk: remoteInfo.ppk,
-          activeMasterKeyId: remoteInfo.activeMasterKeyId,
-        });
-
-        return {
-          status: "succeeded",
-          message: "Sync info verified with enabled encryption",
-          remoteInfo,
-          e2eInfo: this.e2eInfo(),
-        };
-      }
     }
+    this.setE2EInfo(localE2EInfo);
+    return {
+      status: "succeeded",
+      message: "E2E setup successfully!",
+      remoteInfo,
+    };
+
+    // else {
+    //   // There's no change both sides
+
+    //   if (!remoteInfo.e2ee) {
+    //     // both disable E2E
+
+    //     // set encryption to disable
+    //     this.setE2EInfo({
+    //       e2ee: false,
+    //       ppk: null,
+    //       activeMasterKeyId: null,
+    //     });
+
+    //     logger.info(
+    //       "Both client and remote disabled E2E, disabling encryption..."
+    //     );
+    //     return {
+    //       status: "succeeded",
+    //       message: "Sync info verified with disabled encryption",
+    //       e2eInfo: this.e2eInfo(),
+    //     };
+    //   } else {
+    //     // both enable E2E, check if they have the same PPK
+    //     console.log("remote info before check: ", remoteInfo);
+    //     if (remoteInfo.ppk.id !== localE2E.ppk.id) {
+    //       logger.warn("Encryption mismatched changed between local and remote");
+    //       return {
+    //         status: "aborted",
+    //         message:
+    //           "There's a change in encryption key (ppk) settings, please fetch and update your e2e input to match the remote's",
+    //         remoteInfo,
+    //       };
+    //     }
+
+    //     // else enable encryption
+    //     logger.info(
+    //       "Both client and remote enabled E2E with matched ppk, setting activeMasterKeyId on client..."
+    //     );
+
+    //     this.setE2EInfo({
+    //       e2ee: true,
+    //       ppk: remoteInfo.ppk,
+    //       activeMasterKeyId: remoteInfo.activeMasterKeyId,
+    //     });
+
+    //     return {
+    //       status: "succeeded",
+    //       message: "Sync info verified with enabled encryption",
+    //       remoteInfo,
+    //       e2eInfo: this.e2eInfo(),
+    //     };
+    //   }
+    // }
   }
   public async verifySyncInfo() {
     let remoteInfo = await fetchSyncInfo(this.api());
@@ -436,11 +470,11 @@ export default class Synchronizer {
         `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
       );
 
-    // const e2eCheck = await this.setupE2E(this.e2eInfo());
-    // if (e2eCheck.status != "succeeded")
-    //   throw new Error(
-    //     "Remote and local's E2E are different, use setupE2E() to setup properly!"
-    //   );
+    const e2eCheck = await this.verifyAndSetE2EInfo(this.e2eInfo());
+    if (e2eCheck.status != "succeeded")
+      throw new Error(
+        "Remote and local's E2E are different, use Synchronizer.verifyAndSetE2EInfo() to setup properly!"
+      );
   }
 
   // ====================== Sync Library API ======================

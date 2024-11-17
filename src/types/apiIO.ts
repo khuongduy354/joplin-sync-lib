@@ -67,7 +67,7 @@ export type deleteItemOutput = {
   error?: Error;
 };
 
-export type setupE2EOutput = {
+export type verifyAndSetE2EInfoOutput = {
   status: "succeeded" | "aborted";
   message: string;
   remoteInfo?: SyncInfo;
