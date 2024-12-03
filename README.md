@@ -22,7 +22,7 @@ npm run start
 see DEV.md for more explains 
 
 # Getting started 
-> See ![Initialization](#initialization) if you have understand and want to skip this explanation.
+> See [Initialization](#initialization) if you have understand and want to skip this explanation.
 
 Before using Synchronizer methods, some setup steps is needed, make sure you run `npm install` at the root of this repo.  
 
