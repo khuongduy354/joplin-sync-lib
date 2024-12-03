@@ -22,6 +22,8 @@ npm run start
 see DEV.md for more explains 
 
 # Getting started 
+> See ![Initialization](#Initialization) if you have understand and want to skip this explanation.
+
 Before using Synchronizer methods, some setup steps is needed, make sure you run `npm install` at the root of this repo.  
 
 There're some terms we'll be using: Synchronizer, Sync target, File API, drivers,... Checks the explanation here: https://joplinapp.org/help/dev/spec/sync/#vocabulary
