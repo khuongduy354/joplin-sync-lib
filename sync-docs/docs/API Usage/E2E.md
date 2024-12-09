@@ -1,4 +1,4 @@
-# E2E integration flow for Sync API
+# E2E Encryption
 
 ## Setup E2E for Synchronizer  
  
@@ -79,6 +79,4 @@ Our client is the Device 2 in case (1) above
  -> we further check if the ppk of remote and client matched 
     1. if matched, which means 2 devices are synced properly with E2E 
     2. if unmatched, our client is Device 2 in case (3)
-
-
 

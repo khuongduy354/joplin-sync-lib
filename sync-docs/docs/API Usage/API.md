@@ -1,10 +1,10 @@
-# Sync API Docs 
+# Joplin Sync API docs
 > Main docs for Sync API users.
 - To use this API, assuming that sync target is available (user setup and ran synchronize on joplin client at least once)    
-- Assuming that the library supports sync version 3 (latest sync version).
+- Assuming that the library supports only sync version 3 (latest sync version).
  
+## Initialization 
 
-# Initialization 
 ```js
 // 1. Pick a sync target 
 // currently, database set to null as argument, in the future, we may inject a db instance
@@ -15,7 +15,7 @@ const syncTarget = new FileSystemSyncTarget(null);
 const syncPath = "src/sample_app/Storage/fsSyncTarget"; // filesystem sync target
 await syncTarget.initFileApi(syncPath); 
 
-// or, a MemorySyncTarget doesn't need to provide anything   
+// or, a MemorySyncTarget which doesn't need to provide anything   
 // const syncTarget = new MemorySyncTarget(null);
 await syncTarget.initFileApi();
 
@@ -24,18 +24,14 @@ await syncTarget.initFileApi();
 // with the synchronizer we can perform operations directly to sync target
 const syncer = await syncTarget.synchronizer();  
 
-
-// Extra: Init sync info method 
-// as stated before, Sync API only works with initialized sync target (contains info.json),
-// and sync target should be initialized using Joplin clients: Desktop, Mobile,... 
-// this method below is used for testing only, which will initialize remote from code by creating a info.json file
-await syncer.migrationHandler().initSyncInfo3();
+// 4. Initialize Sync target (creates info.json on remote)
+await syncer.initSyncInfo();
 ```
 
-# Synchronizer Operations   
+## Synchronizer Operations   
 After initializing Synchronizer from above steps, these methods are supported:
 
-```js  
+```ts  
 // GET a single item from remote, 
 // Provide either an id or a path of item
 // unserializeItem option is default to false, if true will return item as an object, return as string otherwise
@@ -45,7 +41,7 @@ type getItemInput = {
   id?: string;
   unserializeItem?: boolean;
 };
-type getItemOutput = string | null | any;
+type getItemOutput = string | null | Item;
  
 // GET multiple items from remote 
 // Similar to getItem, provide a list of ids (paths are not supported), unserializeAll === true will return items as an array of object, return an array of string otherwise
@@ -54,7 +50,7 @@ type getItemsInput = {
   ids: string[];
   unserializeAll?: boolean;
 };
-type getItemsOutput = any[];
+type getItemsOutput = Item[];
 
 
 // GET items metadata from remote  
@@ -64,12 +60,11 @@ type getItemsOutput = any[];
 type getItemsMetadataInput = {
   context: {
     timestamp?: number; //in unixMs, retrieve items with .updated_time field after timestamp (inclusive)
-  };
-  outputLimit?: number; // default to 50 
+  }; outputLimit?: number; // default to 50 
 };
 
 type getItemsMetadataOutput = {
-  items: any[];
+  items: Item[];
   hasMore: boolean; 
   context: {
     timestamp: number; // use to fetch more, or keep track of next fetch for delta
@@ -80,7 +75,7 @@ type getItemsMetadataOutput = {
 // To avoid conflict, this method only allow updating an item if its .updated_time field on remote is matched exactly with lastSync parameter. 
 .updateItem(updateItemInput): updateItemOutput
 type updateItemInput = {
-  item: any; // preferably in Joplin BaseItem format
+  item: Item; 
   lastSync: number; // timestamp in unixMs
 };
 type updateItemOutput = {
@@ -91,11 +86,11 @@ type updateItemOutput = {
   message: string;
 
   // return when conflicted, use this to resolve conflict
-  remoteItem?: any;
+  remoteItem?: Item;
 
   //  return when success
-  newItem?: any;
-  oldItem?: any;
+  newItem?: Item;
+  oldItem?: Item;
   newSyncTime?: number; // updated timestamp
 };
 
@@ -104,10 +99,10 @@ type updateItemOutput = {
 // Items ids will be generated automatically during creation regardless of input contains id or not, this prevent the client to provide an already available id and cause conflict.
 .createItems(createItemsInput): createItemsOutput
 type createItemsInput = {
-  items: any[]; //preferably array of Joplin BaseItem
+  items: Item[]; 
 };
 type createItemsOutput = {
-  createdItems: any[];
+  createdItems: CreateItem[];
   failedItems: { item: any; error: any }[];
 };
 
@@ -115,7 +110,7 @@ type createItemsOutput = {
 // The provided items should at least have .type_ field and id, if it's a resource (type_ == 4), then this operation will find the blob and metadata, and delete both (2 delete API calls) for each item.
 .deleteItems(deleteItemsInput): deleteItemsOutput
 type deleteItemsInput = {
-  deleteItems: any[];
+  deleteItems: Item[];
 };
 type deleteItemsOutput = {
   status:
@@ -123,7 +118,7 @@ type deleteItemsOutput = {
     | "item not found" // item with provided id not available on remote
     | "could not delete item" // unknown error 
     | "read-only item can't be deleted"; 
-  item?: any;
+  item?: Item;
   error?: any;
 };
 
@@ -143,9 +138,5 @@ type verifySynInfoOutput = {
   message: string;
   remoteSyncInfo?: any; // for debug
 };
-
-
-
-
-
+```
 

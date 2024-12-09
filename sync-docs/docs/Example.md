@@ -1,3 +1,6 @@
+---
+sidebar_position: 1
+---
 # Sync API Demos  
 # How to run demos  
 
@@ -45,3 +48,4 @@ mailClient(true) //uploads with image
 - First it create an initial resource, then retrieve it, change its OCR fields, and call `.updateItem()` to update the remote.
 - After run, there should be a file in  `src/sample_app/Storage/fsSyncTarget/.resource`, its ocr fields (ocr_text) should contains the processed value
 > Expected: It print the before update and after update to console, after update should have ocr fields processed.
+

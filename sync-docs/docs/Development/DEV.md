@@ -1,3 +1,4 @@
+# Development
 # Commands 
 - npm run dev: run src/index.ts (transpile mode)
 - npm run test: jest --silent (run all test cases)  

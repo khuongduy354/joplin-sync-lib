@@ -56,7 +56,7 @@ export default class MigrationHandler extends BaseService {
   // This library only need version 3
   public async initSyncInfo3() {
     // acquire lock
-    this.logger().info("MigrationHandler: Acquiring exclusive lock");
+    // this.logger().info("MigrationHandler: Acquiring exclusive lock");
     const exclusiveLock = await this.lockHandler_.acquireLock(
       LockType.Exclusive,
       this.clientType_,
@@ -73,10 +73,10 @@ export default class MigrationHandler extends BaseService {
       autoLockError = error;
     });
 
-    this.logger().info(
-      "MigrationHandler: Acquired exclusive lock:",
-      exclusiveLock
-    );
+    //   "MigrationHandler: Acquired exclusive lock:",
+    // this.logger().info(
+    //   exclusiveLock
+    // );
     try {
       if (autoLockError) throw autoLockError;
 
@@ -85,7 +85,7 @@ export default class MigrationHandler extends BaseService {
       const syncInfo = new SyncInfo();
       syncInfo.version = 3;
       await uploadSyncInfo(this.api_, syncInfo);
-      this.logger().info(`MigrationHandler: Initialized sync target version 3`);
+      // this.logger().info(`MigrationHandler: Initialized sync target version 3`);
 
       if (autoLockError) throw autoLockError;
       // saveLocalSyncInfo(syncInfo);
@@ -94,14 +94,14 @@ export default class MigrationHandler extends BaseService {
       throw error;
     } finally {
       // release lock
-      this.logger().info("MigrationHandler: Releasing exclusive lock");
+      // this.logger().info("MigrationHandler: Releasing exclusive lock");
       this.lockHandler_.stopAutoLockRefresh(exclusiveLock);
       await this.lockHandler_.releaseLock(
         LockType.Exclusive,
         this.clientType_,
         this.clientId_
       );
-      this.logger().info("MigrationHandler: Released exclusive lock");
+      // this.logger().info("MigrationHandler: Released exclusive lock");
     }
   }
 
