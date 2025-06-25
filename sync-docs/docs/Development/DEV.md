@@ -52,4 +52,3 @@ const res = await syncer.getItemsMetadata({ context: { timestamp: timestamp } })
 
 syncer.getItem({id: "item id", unserializeItem: false}) // get 1 single item, unserializeItem will determine if result is in JS object or string
 ```
-

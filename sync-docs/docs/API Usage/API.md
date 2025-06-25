@@ -1,4 +1,4 @@
-# Joplin Sync API docs
+# Joplin Sync API 
 > Main docs for Sync API users.
 - To use this API, assuming that sync target is available (user setup and ran synchronize on joplin client at least once)    
 - Assuming that the library supports only sync version 3 (latest sync version).

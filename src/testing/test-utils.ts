@@ -8,7 +8,7 @@ import JoplinServerSyncTarget from "../SyncTarget/JoplinServerSyncTarget";
 let synchronizers_: Synchronizer[] = [];
 const fileApis_: Record<number, FileApi> = {};
 let currentClient_ = 1;
-let currentSyncTargetId: number = MemorySyncTarget.id();
+let currentSyncTargetId: number = JoplinServerSyncTarget.id();
 
 function synchronizer(id: number = null) {
   if (id === null) id = currentClient_;
