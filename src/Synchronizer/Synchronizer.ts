@@ -1,5 +1,5 @@
 import JoplinDatabase from "@joplin/lib/JoplinDatabase";
-import { FileApi } from "../FileApi/FileApi";
+import { FileApi, ListOptions } from "../FileApi/FileApi";
 import { logger } from "../helpers/logger";
 import fs from "fs-extra";
 import { AppType } from "@joplin/lib/models/Setting";
@@ -515,6 +515,15 @@ export default class Synchronizer {
 
     return deltaResult;
   }
+  public async getAllItems(options?: ListOptions): Promise<getItemsOutput> {
+    await this.verifySyncInfo();
+
+    // call list api
+    const result = await this.apiCall("list", "", options || {});
+
+    if ("items" in result) return result.items;
+    return result;
+  }
 
   public async getItems(options: getItemsInput): Promise<getItemsOutput> {
     await this.verifySyncInfo();
@@ -532,6 +541,7 @@ export default class Synchronizer {
     }
 
     // Download operation
+    let queueDownloads = [];
     for (const remoteId of options.ids) {
       this.logSyncOperation(
         "fetchingProcessed",
@@ -539,27 +549,31 @@ export default class Synchronizer {
         null,
         "Processing fetched item"
       );
-
       const path = BaseItem.systemPath(remoteId);
       if (!BaseItem.isSystemPath(path)) continue; // The delta API might return things like the .sync, .resource or the root folder
+      queueDownloads.push(
+        new Promise((resolve, reject) => {
+          const loadContent = async () => {
+            // if (supportsDeltaWithItems) return remote.jopItem;
 
-      const loadContent = async () => {
-        // if (supportsDeltaWithItems) return remote.jopItem;
+            const task = await this.downloadQueue_.waitForResult(path);
+            if (task.error) throw task.error;
+            if (!task.result) return null;
 
-        const task = await this.downloadQueue_.waitForResult(path);
-        if (task.error) throw task.error;
-        if (!task.result) return null;
+            if (options.unserializeAll) {
+              return await BaseItem.unserialize(task.result);
+            } else {
+              return await task.result;
+            }
+          };
 
-        if (options.unserializeAll) {
-          return await BaseItem.unserialize(task.result);
-        } else {
-          return await task.result;
-        }
-      };
-
-      let content = await loadContent();
-      result.push(content);
+          loadContent().then((content) => {
+            resolve(content);
+          });
+        })
+      );
     }
+    result = await Promise.all(queueDownloads);
 
     return result;
   }

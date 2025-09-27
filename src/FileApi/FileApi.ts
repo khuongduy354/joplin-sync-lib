@@ -35,6 +35,7 @@ export interface RemoteItem {
 export interface PaginatedList {
   items: RemoteItem[];
   context: any;
+  hasMore?: boolean;
 }
 // eslint-disable-next-line @typescript-eslint/ban-types -- Old code before rule was applied
 async function tryAndRepeat(fn: Function, count: number) {
@@ -77,6 +78,13 @@ export interface ItemStat {
   updated_time: number;
   isDir: boolean;
 }
+
+export type ListOptions = {
+  includeHidden?: boolean;
+  context?: any;
+  includeDirs?: boolean;
+  syncItemsOnly?: boolean;
+};
 
 class FileApi {
   private baseDir_: any;
@@ -261,13 +269,16 @@ class FileApi {
 
   // DRIVER MUST RETURN PATHS RELATIVE TO `path`
   // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
-  public async list(path = "", options: any = null): Promise<PaginatedList> {
-    if (!options) options = {};
-    if (!("includeHidden" in options)) options.includeHidden = false;
-    if (!("context" in options)) options.context = null;
-    if (!("includeDirs" in options)) options.includeDirs = true;
-    if (!("syncItemsOnly" in options)) options.syncItemsOnly = false;
 
+  public async list(
+    path = "",
+    options: ListOptions = {
+      includeHidden: false,
+      context: null,
+      includeDirs: true,
+      syncItemsOnly: false,
+    }
+  ): Promise<PaginatedList> {
     this.logger().debug(`list ${this.baseDir()}`);
 
     const result: PaginatedList = await tryAndRepeat(

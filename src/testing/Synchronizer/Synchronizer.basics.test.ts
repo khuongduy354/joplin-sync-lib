@@ -48,6 +48,10 @@ describe("Synchronizer.basics", () => {
     // check if remote item is the same as the one uploaded
     remote = (await BaseItem.unserialize(remote as string)) as Item;
     expect(remote.id).toBe(res.createdItems[0].id);
+
+    // check get all items work
+    const allItems = await syncer.getAllItems();
+    expect(allItems.length).toBeGreaterThan(0);
   });
 
   it("should throw when upload conflicted items ids", async () => {

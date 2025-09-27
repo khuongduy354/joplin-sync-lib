@@ -19,8 +19,7 @@ async function main() {
     };
     await syncTarget.initFileApi(options);
     const syncer = await syncTarget.synchronizer();
-    await syncer.
-
+    // await syncer.
   } catch (e) {
     console.error(e);
   }
