@@ -3,21 +3,38 @@
 import { FileSystemSyncTarget } from "../SyncTarget/FileSystemSyncTarget";
 import JoplinServerSyncTarget from "../SyncTarget/JoplinServerSyncTarget";
 import { MemorySyncTarget } from "../SyncTarget/MemorySyncTarget";
+import WebDAVSyncTarget, {
+  WebDAVSyncOptions,
+} from "../SyncTarget/WebDAVSyncTarget";
+import OneDriveSyncTarget from "../SyncTarget/OneDriveSyncTarget";
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { loadClasses } from "../helpers/item";
 import { createItemsInput, getItemsInput } from "../types/apiIO";
 import { CreateItem } from "../types/item";
 
 // Add more sync targets as needed
-type SyncTargetType = "FileSystem" | "JoplinServer" | "Memory";
+type SyncTargetType =
+  | "FileSystem"
+  | "JoplinServer"
+  | "Memory"
+  | "WebDAV"
+  | "OneDrive";
 
 const SYNC_TARGETS: Record<SyncTargetType, any> = {
   FileSystem: FileSystemSyncTarget,
   JoplinServer: JoplinServerSyncTarget,
   Memory: MemorySyncTarget,
+  WebDAV: WebDAVSyncTarget,
+  OneDrive: OneDriveSyncTarget,
 };
 
 type StorageAPIOptions = {
+  webDAVOptions?: {
+    username: string;
+    password: string;
+    path: string;
+    ignoreTlsErrors?: boolean;
+  };
   filesystemOptions?: {
     syncPath?: string; // For FileSystem
   };
@@ -26,6 +43,12 @@ type StorageAPIOptions = {
     password: string;
     path: string;
     userContentPath: string;
+  };
+  oneDriveOptions?: {
+    clientId: string;
+    clientSecret: string;
+    authToken?: string; // Optional pre-existing auth token
+    isPublic?: boolean; // Whether this is a public client (mobile/desktop)
   };
   // Add more options as needed
 };
@@ -76,6 +99,26 @@ export class StorageAPI {
 
       // You may want to pass server URL, auth, etc. via options
       await this.syncTarget.initFileApi(options);
+    } else if (this.syncTargetType === "WebDAV") {
+      const options: WebDAVSyncOptions = {
+        username: () => this.options.webDAVOptions?.username || "",
+        password: () => this.options.webDAVOptions?.password || "",
+
+        path: () => this.options.webDAVOptions?.path || "",
+        ignoreTlsErrors: () =>
+          this.options.webDAVOptions?.ignoreTlsErrors || false,
+      };
+
+      await this.syncTarget.initFileApi(options);
+    } else if (this.syncTargetType === "OneDrive") {
+      // OneDrive requires special initialization
+      // Note: Full OneDrive support requires authentication flow implementation
+      // This is a placeholder for basic initialization
+      throw new Error(
+        "OneDrive sync target requires authentication implementation. Please use FileSystem, WebDAV, or JoplinServer for now."
+      );
+    } else {
+      throw new Error(`Unsupported sync target type: ${this.syncTargetType}`);
     }
     this.syncer = await this.syncTarget.synchronizer();
     await this.syncer.initSyncInfo();

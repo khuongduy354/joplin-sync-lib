@@ -18,6 +18,10 @@ let currentSyncTargetId: number = JoplinServerSyncTarget.id();
 
 ### Additional Configs
 - MemorySyncTarget: no other configs needed beside above 
+- WebDAVSyncTarget:  
+use https://nextcloud.com/install/#aio to setup NextCloud
+
+
 - JoplinServerSyncTarget:   
 1. create a .env in root directory similar to joplinserver.example.env
 2. run `docker run --env-file .env -p 22300:22300 joplin/server:latest` 

@@ -84,6 +84,7 @@ export type ListOptions = {
   context?: any;
   includeDirs?: boolean;
   syncItemsOnly?: boolean;
+  unserializeAll?: boolean;
 };
 
 class FileApi {
