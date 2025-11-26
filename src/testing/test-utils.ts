@@ -4,11 +4,13 @@ import { MemorySyncTarget } from "../SyncTarget/MemorySyncTarget";
 import FileApiDriverMemory from "../FileApi/Driver/FileApiMemoryDriver";
 import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
 import JoplinServerSyncTarget from "../SyncTarget/JoplinServerSyncTarget";
+import OneDriveSyncTarget from "../SyncTarget/OneDriveSyncTarget";
+import GoogleDriveSyncTarget from "../SyncTarget/GoogleDriveSyncTarget";
 
 let synchronizers_: Synchronizer[] = [];
 const fileApis_: Record<number, FileApi> = {};
 let currentClient_ = 1;
-let currentSyncTargetId: number = MemorySyncTarget.id();
+let currentSyncTargetId: number = OneDriveSyncTarget.id();
 
 function synchronizer(id: number = null) {
   if (id === null) id = currentClient_;
@@ -65,6 +67,32 @@ async function setupDatabaseAndSynchronizer(id: number, options: any = {}) {
       const fileApi = await syncTarget.initFileApi(options);
       if (!fileApis_[syncTargetId_]) fileApis_[syncTargetId_] = fileApi;
       const syncer = await syncTarget.synchronizer();
+      synchronizers_[id] = syncer;
+    } else if (syncTargetId_ === 3) {
+      // OneDrive
+      const syncTarget = new OneDriveSyncTarget(null, {
+        authToken: process.env.ONEDRIVE_AUTH_TOKEN,
+        clientId: process.env.ONEDRIVE_CLIENT_ID,
+        clientSecret: process.env.ONEDRIVE_CLIENT_SECRET,
+        isPublic: process.env.ONEDRIVE_IS_PUBLIC === "true",
+      });
+      // Don't call initFileApi() directly - let synchronizer() handle it
+      const syncer = await syncTarget.synchronizer();
+      const fileApi = await syncTarget.fileApi();
+      if (!fileApis_[syncTargetId_]) fileApis_[syncTargetId_] = fileApi;
+      synchronizers_[id] = syncer;
+    } else if (syncTargetId_ === 10) {
+      // GoogleDrive
+      const syncTarget = new GoogleDriveSyncTarget(null, {
+        authToken: process.env.GOOGLEDRIVE_AUTH_TOKEN,
+        clientId: process.env.GOOGLEDRIVE_CLIENT_ID,
+        clientSecret: process.env.GOOGLEDRIVE_CLIENT_SECRET,
+        isPublic: process.env.GOOGLEDRIVE_IS_PUBLIC === "true",
+      });
+      // Don't call initFileApi() directly - let synchronizer() handle it
+      const syncer = await syncTarget.synchronizer();
+      const fileApi = await syncTarget.fileApi();
+      if (!fileApis_[syncTargetId_]) fileApis_[syncTargetId_] = fileApi;
       synchronizers_[id] = syncer;
     } else if (syncTargetId_ === 2) {
       // Filesystem

@@ -6,7 +6,7 @@ import JoplinError from "@joplin/lib/JoplinError";
 // const checkProviderIsSupported = require("./utils/webDAVUtils").default;
 import WebDavApi from "../WebDAVApi";
 
-const checkProviderIsSupported = (path: string) => {
+export const checkProviderIsSupported = (path: string) => {
   const lowerPath = path.toLowerCase();
   if (
     lowerPath.startsWith("http://") ||

@@ -11,6 +11,7 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
   private api_: any;
   private authToken_: string | null = null;
   private context_: any = null;
+  private oauthFlowHandler_: ((url: string) => Promise<string>) | null = null;
 
   public static id() {
     return 3;
@@ -20,9 +21,40 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
   public constructor(db: any, options: any = null) {
     super(db, options);
     this.api_ = null;
-    // Options can include: authToken, context, clientId, clientSecret, isPublic
+    // Options can include: authToken, context, clientId, clientSecret, isPublic, oauthFlowHandler
     if (options?.authToken) this.authToken_ = options.authToken;
     if (options?.context) this.context_ = options.context;
+    if (options?.oauthFlowHandler)
+      this.oauthFlowHandler_ = options.oauthFlowHandler;
+
+    // Validate authentication options
+    this.validateAuthOptions(options);
+  }
+
+  /**
+   * Validates that either authToken or (clientId + clientSecret) is provided
+   */
+  private validateAuthOptions(options: any) {
+    const hasAuthToken = options?.authToken;
+    const hasClientCredentials = options?.clientId && options?.clientSecret;
+
+    // If no auth token, client credentials are required
+    if (!hasAuthToken && !hasClientCredentials) {
+      // Check if using default parameters
+      const env = options?.env || "dev";
+      const params = parameters_[env] || parameters_.dev;
+      const hasDefaultCredentials =
+        params.oneDrive?.id && params.oneDrive?.secret;
+
+      if (!hasDefaultCredentials) {
+        throw new Error(
+          "OneDrive authentication requires either: " +
+            "1) An authToken (pre-authenticated), or " +
+            "2) Both clientId and clientSecret to initiate OAuth flow. " +
+            "Please provide valid authentication credentials."
+        );
+      }
+    }
   }
 
   public static unsupportedPlatforms() {
@@ -74,6 +106,41 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
 
   public authRouteName() {
     return "OneDriveLogin";
+  }
+
+  /**
+   * Initiates OAuth flow if no auth token is available
+   * @param redirectUri - The redirect URI for OAuth callback (defaults to Azure native client URL)
+   * @returns The authorization code from OAuth flow
+   */
+  public async initiateOAuthFlow(redirectUri?: string): Promise<void> {
+    const api = this.api();
+    // Use Azure's native client redirect URL by default
+    const uri = redirectUri || api.nativeClientRedirectUrl();
+    const authUrl = api.authCodeUrl(uri);
+
+    this.logger().info("Initiating OneDrive OAuth flow...");
+    this.logger().info(`Authorization URL: ${authUrl}`);
+
+    if (this.oauthFlowHandler_) {
+      // Use custom OAuth flow handler provided by the application
+      try {
+        const authCode = await this.oauthFlowHandler_(authUrl);
+        await api.execTokenRequest(authCode, uri);
+        this.authToken_ = JSON.stringify(api.auth());
+        this.logger().info("OAuth flow completed successfully");
+      } catch (error) {
+        this.logger().error("OAuth flow failed:", error);
+        throw new Error(`OneDrive OAuth flow failed: ${error.message}`);
+      }
+    } else {
+      // No handler provided - instruct user to complete flow manually
+      throw new Error(
+        `OneDrive authentication required. Please visit the following URL to authorize:\n\n${authUrl}\n\n` +
+          "After authorization, provide the auth token via 'authToken' option, or " +
+          "implement an 'oauthFlowHandler' to automate the OAuth flow."
+      );
+    }
   }
 
   public api() {
@@ -147,8 +214,33 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
 
   public async initSynchronizer() {
     try {
-      if (!(await this.isAuthenticated()))
-        throw new Error("User is not authenticated");
+      // Check if authenticated, if not, attempt OAuth flow
+      if (!(await this.isAuthenticated())) {
+        // If we have client credentials but no auth token, try to initiate OAuth
+        const hasClientCredentials =
+          this.option("clientId") && this.option("clientSecret");
+        const params = this.oneDriveParameters();
+        const hasDefaultCredentials = params.id && params.secret;
+
+        if (hasClientCredentials || hasDefaultCredentials) {
+          this.logger().warn("No auth token found. OAuth flow required.");
+          await this.initiateOAuthFlow();
+
+          // Verify authentication succeeded
+          if (!(await this.isAuthenticated())) {
+            throw new Error(
+              "OAuth flow completed but user is still not authenticated"
+            );
+          }
+        } else {
+          throw new Error("User is not authenticated");
+        }
+      }
+
+      // Initialize file API after successful authentication
+      if (!this.fileApi_) {
+        this.fileApi_ = await this.initFileApi();
+      }
 
       // appType defaults to 'cli' if not specified
       const appType = this.option("appType", "cli");

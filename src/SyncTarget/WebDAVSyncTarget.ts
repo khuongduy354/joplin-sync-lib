@@ -1,12 +1,11 @@
 import { AppType } from "@joplin/lib/models/Setting";
-
-const BaseSyncTarget = require("./BaseSyncTarget").default;
-const Setting = require("./models/Setting").default;
-const { FileApi } = require("./file-api.js");
-const Synchronizer = require("./Synchronizer").default;
+import { BaseSyncTarget } from "./BaseSyncTarget";
+import { FileApi } from "../FileApi/FileApi";
+import Synchronizer from "../Synchronizer/Synchronizer";
 import WebDavApi from "../FileApi/WebDAVApi";
-import FileApiDriverWebDav from "../FileApi/Driver/FileApiWebDAVDriver";
-const checkProviderIsSupported = require("./utils/webDAVUtils").default;
+import FileApiDriverWebDav, {
+  checkProviderIsSupported,
+} from "../FileApi/Driver/FileApiWebDAVDriver";
 
 export interface WebDAVSyncOptions {
   path(): string;
