@@ -28,50 +28,58 @@ describe("Synchronizer.basics", () => {
   });
 
   // NO-CONFLICT API TESTS (read + create only)
-  itIfCategory("no-conflict", "should upload/create and pull item", async () => {
-    const note = createNote({
-      parent_id: "parent id",
-    });
+  itIfCategory(
+    "no-conflict",
+    "should upload/create and pull item",
+    async () => {
+      const note = createNote({
+        parent_id: "parent id",
+      });
 
-    const syncer = synchronizer(1);
-    const res = await syncer.createItems({ items: [note] });
+      const syncer = synchronizer(1);
+      const res = await syncer.createItems({ items: [note] });
 
-    // get by id
-    let remote = await syncer.getItem({ id: res.createdItems[0].id });
+      // get by id
+      let remote = await syncer.getItem({ id: res.createdItems[0].id });
 
-    // get by path
-    const path = BaseItem.systemPath(res.createdItems[0].id);
-    const remoteByPath = await syncer.getItem({ path });
+      // get by path
+      const path = BaseItem.systemPath(res.createdItems[0].id);
+      const remoteByPath = await syncer.getItem({ path });
 
-    // both must yield same result
-    expect(!!remote).toBe(true);
-    expect(remoteByPath).toBe(remote);
+      // both must yield same result
+      expect(!!remote).toBe(true);
+      expect(remoteByPath).toBe(remote);
 
-    // check if remote item is the same as the one uploaded
-    remote = (await BaseItem.unserialize(remote as string)) as Item;
-    expect(remote.id).toBe(res.createdItems[0].id);
+      // check if remote item is the same as the one uploaded
+      remote = (await BaseItem.unserialize(remote as string)) as Item;
+      expect(remote.id).toBe(res.createdItems[0].id);
 
-    // check get all items work
-    const allItems = await syncer.getAllItems();
-    expect(allItems.length).toBeGreaterThan(0);
-  });
+      // check get all items work
+      const allItems = await syncer.getAllItems();
+      expect(allItems.length).toBeGreaterThan(0);
+    }
+  );
 
-  itIfCategory("no-conflict", "should throw when upload conflicted items ids", async () => {
-    const note: CreateItem = createNote({
-      title: "un",
-      parent_id: "parent id",
-      body: "body",
-    });
+  itIfCategory(
+    "no-conflict",
+    "should throw when upload conflicted items ids",
+    async () => {
+      const note: CreateItem = createNote({
+        title: "un",
+        parent_id: "parent id",
+        body: "body",
+      });
 
-    note.overrideId = "this is the chosen id";
+      note.overrideId = "this is the chosen id";
 
-    const syncer = synchronizer(1);
-    const res1 = await syncer.createItems({ items: [note] });
-    const res2 = await syncer.createItems({ items: [note] });
-    expect(res2.failedItems[0].error.message).toBe(
-      "Remote item exists, can't create. "
-    );
-  });
+      const syncer = synchronizer(1);
+      const res1 = await syncer.createItems({ items: [note] });
+      const res2 = await syncer.createItems({ items: [note] });
+      expect(res2.failedItems[0].error.message).toBe(
+        "Remote item exists, can't create. "
+      );
+    }
+  );
 
   // CONFLICTABLE API TESTS (update operations)
   itIfCategory("conflictable", "should update remote items", async () => {
@@ -107,83 +115,95 @@ describe("Synchronizer.basics", () => {
   });
 
   // NO-CONFLICT API TESTS (read operations)
-  itIfCategory("no-conflict", "should pull all remote items metadata", async () => {
-    // upload 1 note
-    const note = createNote({
-      parent_id: "parent id",
-    });
-    const syncer = synchronizer(1);
-    const res = await syncer.createItems({ items: [note] });
+  itIfCategory(
+    "no-conflict",
+    "should pull all remote items metadata",
+    async () => {
+      // upload 1 note
+      const note = createNote({
+        parent_id: "parent id",
+      });
+      const syncer = synchronizer(1);
+      const res = await syncer.createItems({ items: [note] });
 
-    // pull and check if the created is included
-    const expectedPath = res.createdItems[0].id + ".md";
-    const allItems = await syncer.getItemsMetadata();
+      // pull and check if the created is included
+      const expectedPath = res.createdItems[0].id + ".md";
+      const allItems = await syncer.getItemsMetadata();
 
-    // should includes the uploaded item
-    expect(allItems.items.some((it) => it.path === expectedPath)).toBe(true);
-  });
+      // should includes the uploaded item
+      expect(allItems.items.some((it) => it.path === expectedPath)).toBe(true);
+    }
+  );
 
-  itIfCategory("no-conflict", "should pull remote items metadata based on delta algorithm", async () => {
-    // upload 2 note
-    const note = createNote({
-      title: "un",
-      parent_id: "parent id",
-    });
-    note.updated_time = time.IsoToUnixMs("2024-06-14T02:31:45.188Z");
+  itIfCategory(
+    "no-conflict",
+    "should pull remote items metadata based on delta algorithm",
+    async () => {
+      // upload 2 note
+      const note = createNote({
+        title: "un",
+        parent_id: "parent id",
+      });
+      note.updated_time = time.IsoToUnixMs("2024-06-14T02:31:45.188Z");
 
-    const note2 = createNote({
-      parent_id: "parent id",
-    });
-    note2.updated_time = time.IsoToUnixMs("2024-06-01T02:31:45.188Z");
+      const note2 = createNote({
+        parent_id: "parent id",
+      });
+      note2.updated_time = time.IsoToUnixMs("2024-06-01T02:31:45.188Z");
 
-    const syncer = synchronizer(1);
-    const res = await syncer.createItems({ items: [note, note2] });
+      const syncer = synchronizer(1);
+      const res = await syncer.createItems({ items: [note, note2] });
 
-    // pull all files
-    let allItems = await syncer.getItemsMetadata();
-    expect(allItems.items.length >= 2).toBe(true);
-    expect(allItems.items.some((it) => it.id === res.createdItems[0].id)).toBe(
-      true
-    );
+      // pull all files
+      let allItems = await syncer.getItemsMetadata();
+      expect(allItems.items.length >= 2).toBe(true);
+      expect(
+        allItems.items.some((it) => it.id === res.createdItems[0].id)
+      ).toBe(true);
 
-    // pull a file that is 10 minutes ahead of now
-    const timestamp = time.unixMs() + 10 * 60 * 1000;
-    allItems = await syncer.getItemsMetadata({
-      context: { timestamp },
-    });
+      // pull a file that is 10 minutes ahead of now
+      const timestamp = time.unixMs() + 10 * 60 * 1000;
+      allItems = await syncer.getItemsMetadata({
+        context: { timestamp },
+      });
 
-    expect(allItems.items.length).toBe(0); // no new items should be pulled
-  });
+      expect(allItems.items.length).toBe(0); // no new items should be pulled
+    }
+  );
 
   // CONFLICTABLE API TESTS (delete operations involve conflict potential)
-  itIfCategory("conflictable", "should track deleted items in get items metadata with delta algorithm", async () => {
-    // upload 1 note
-    const note1 = createNote({
-      parent_id: "parent id",
-    });
-    note1.updated_time = time.IsoToUnixMs("2024-06-14T02:31:45.188Z");
+  itIfCategory(
+    "conflictable",
+    "should track deleted items in get items metadata with delta algorithm",
+    async () => {
+      // upload 1 note
+      const note1 = createNote({
+        parent_id: "parent id",
+      });
+      note1.updated_time = time.IsoToUnixMs("2024-06-14T02:31:45.188Z");
 
-    const syncer = synchronizer(1);
-    const res = await syncer.createItems({ items: [note1] });
-    const id1 = res.createdItems[0].id;
+      const syncer = synchronizer(1);
+      const res = await syncer.createItems({ items: [note1] });
+      const id1 = res.createdItems[0].id;
 
-    // pull all files
-    let allItems = await syncer.getItemsMetadata();
-    expect(allItems.items.length >= 1).toBe(true);
+      // pull all files
+      let allItems = await syncer.getItemsMetadata();
+      expect(allItems.items.length >= 1).toBe(true);
 
-    await syncer.deleteItems({ deleteItems: [{ id: id1, type_: 0 }] });
+      await syncer.deleteItems({ deleteItems: [{ id: id1, type_: 0 }] });
 
-    allItems = await syncer.getItemsMetadata({
-      context: { trackDeleteItems: true },
-      allItemIdsHandler: async () => {
-        return [id1];
-      },
-    });
-    expect(allItems.items.length >= 1).toBe(true);
-    expect(
-      allItems.items.some((it) => it.id === id1 && it.isDeleted === true)
-    ).toBe(true);
-  });
+      allItems = await syncer.getItemsMetadata({
+        context: { trackDeleteItems: true },
+        allItemIdsHandler: async () => {
+          return [id1];
+        },
+      });
+      expect(allItems.items.length >= 1).toBe(true);
+      expect(
+        allItems.items.some((it) => it.id === id1 && it.isDeleted === true)
+      ).toBe(true);
+    }
+  );
 
   // CONFLICTABLE API TESTS (delete operations)
   itIfCategory("conflictable", "should delete remote items", async () => {

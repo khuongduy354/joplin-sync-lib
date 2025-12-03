@@ -18,8 +18,8 @@ describe("Synchronizer.resource", () => {
     await setupDatabaseAndSynchronizer(1);
     await setupDatabaseAndSynchronizer(2);
 
-   await synchronizer(1).initSyncInfo();
-   await synchronizer(2).initSyncInfo(); 
+    await synchronizer(1).initSyncInfo();
+    await synchronizer(2).initSyncInfo();
 
     synchronizer().testingHooks_ = [];
   });
@@ -29,30 +29,36 @@ describe("Synchronizer.resource", () => {
   });
 
   // NO-CONFLICT API TESTS (create + read)
-  itIfCategory("no-conflict", "should create new resource with blobs and metadata", async () => {
-    const resourcePath = "./src/testing/resource/image.png";
-    const resource = createResource({ localResourceContentPath: resourcePath });
+  itIfCategory(
+    "no-conflict",
+    "should create new resource with blobs and metadata",
+    async () => {
+      const resourcePath = "./src/testing/resource/image.png";
+      const resource = createResource({
+        localResourceContentPath: resourcePath,
+      });
 
-    const syncer = synchronizer(1);
-    const res = await syncer.createItems({ items: [resource] });
+      const syncer = synchronizer(1);
+      const res = await syncer.createItems({ items: [resource] });
 
-    // check if resource available
-    let remote = (await syncer.getItem({
-      id: res.createdItems[0].id,
-      unserializeItem: true,
-    })) as Item;
-    expect(!!remote).toBe(true);
+      // check if resource available
+      let remote = (await syncer.getItem({
+        id: res.createdItems[0].id,
+        unserializeItem: true,
+      })) as Item;
+      expect(!!remote).toBe(true);
 
-    // check if remote item is the same as the one uploaded
-    expect(remote.title).toBe(resource.title);
-    expect(remote.id).toBe(res.createdItems[0].id);
+      // check if remote item is the same as the one uploaded
+      expect(remote.title).toBe(resource.title);
+      expect(remote.id).toBe(res.createdItems[0].id);
 
-    // check if blob is available
-    const blob = await syncer.getItem({
-      path: resourceRemotePath(res.createdItems[0].id),
-    });
-    expect(!!blob).toBe(true);
-  });
+      // check if blob is available
+      const blob = await syncer.getItem({
+        path: resourceRemotePath(res.createdItems[0].id),
+      });
+      expect(!!blob).toBe(true);
+    }
+  );
 
   // CONFLICTABLE API TESTS (delete operations)
   itIfCategory("conflictable", "should delete blobs and metadata", async () => {
@@ -86,77 +92,87 @@ describe("Synchronizer.resource", () => {
   });
 
   // NO-CONFLICT API TESTS (create + read)
-  itIfCategory("no-conflict", "should upload/download resource with blob", async () => {
-    // prep payload
-    const resourcePath = "./src/testing/resource/image.png";
-    const resource = createResource({ localResourceContentPath: resourcePath });
+  itIfCategory(
+    "no-conflict",
+    "should upload/download resource with blob",
+    async () => {
+      // prep payload
+      const resourcePath = "./src/testing/resource/image.png";
+      const resource = createResource({
+        localResourceContentPath: resourcePath,
+      });
 
-    // upload
-    const syncer = synchronizer(1);
-    const res = await syncer.createItems({ items: [resource] });
+      // upload
+      const syncer = synchronizer(1);
+      const res = await syncer.createItems({ items: [resource] });
 
-    // ensure resource metadata on remote
-    const remoteRes = (await syncer.getItem({
-      id: res.createdItems[0].id,
-      unserializeItem: true,
-    })) as Item;
+      // ensure resource metadata on remote
+      const remoteRes = (await syncer.getItem({
+        id: res.createdItems[0].id,
+        unserializeItem: true,
+      })) as Item;
 
-    expect(remoteRes.id).toBe(res.createdItems[0].id);
+      expect(remoteRes.id).toBe(res.createdItems[0].id);
 
-    // download blob & compare
-    const localPath = "./temp/image.png";
-    await syncer.getBlob(res.createdItems[0].id, localPath);
-    expect(fs.readFileSync(localPath)).toEqual(fs.readFileSync(resourcePath));
+      // download blob & compare
+      const localPath = "./temp/image.png";
+      await syncer.getBlob(res.createdItems[0].id, localPath);
+      expect(fs.readFileSync(localPath)).toEqual(fs.readFileSync(resourcePath));
 
-    // cleanup
-    fs.unlinkSync(localPath);
-    expect(fs.existsSync(localPath)).toBe(false);
-  });
+      // cleanup
+      fs.unlinkSync(localPath);
+      expect(fs.existsSync(localPath)).toBe(false);
+    }
+  );
 
   // CONFLICTABLE API TESTS (update operations)
-  itIfCategory("conflictable", "should update blob data if specified", async () => {
-    // prep payload
-    const resourcePath1 = "./src/testing/resource/image.png";
-    const resourcePath2 = "./src/testing/resource/joplin-logo.png";
-    const resource1 = createResource({
-      localResourceContentPath: resourcePath1,
-    });
+  itIfCategory(
+    "conflictable",
+    "should update blob data if specified",
+    async () => {
+      // prep payload
+      const resourcePath1 = "./src/testing/resource/image.png";
+      const resourcePath2 = "./src/testing/resource/joplin-logo.png";
+      const resource1 = createResource({
+        localResourceContentPath: resourcePath1,
+      });
 
-    // upload
-    const syncer = synchronizer(1);
-    const res = await syncer.createItems({ items: [resource1] });
+      // upload
+      const syncer = synchronizer(1);
+      const res = await syncer.createItems({ items: [resource1] });
 
-    // old blob should be same as path 1
-    const localPath = "./temp/image.png";
-    await syncer.getBlob(res.createdItems[0].id, localPath);
-    const item = await syncer.getItem({ id: res.createdItems[0].id });
-    const blob1 = fs.readFileSync(localPath);
+      // old blob should be same as path 1
+      const localPath = "./temp/image.png";
+      await syncer.getBlob(res.createdItems[0].id, localPath);
+      const item = await syncer.getItem({ id: res.createdItems[0].id });
+      const blob1 = fs.readFileSync(localPath);
 
-    expect(blob1).toEqual(fs.readFileSync(resourcePath1));
+      expect(blob1).toEqual(fs.readFileSync(resourcePath1));
 
-    // update blob
-    await syncer.updateItem({
-      item: {
-        id: res.createdItems[0].id,
-        type_: BaseModel.TYPE_RESOURCE,
-        updateBlob: true,
-        localResourceContentPath: resourcePath2,
-      },
-      lastSync: res.createdItems[0].updated_time,
-    });
+      // update blob
+      await syncer.updateItem({
+        item: {
+          id: res.createdItems[0].id,
+          type_: BaseModel.TYPE_RESOURCE,
+          updateBlob: true,
+          localResourceContentPath: resourcePath2,
+        },
+        lastSync: res.createdItems[0].updated_time,
+      });
 
-    // new blob should be the same as path2
-    await syncer.getBlob(res.createdItems[0].id, localPath);
-    expect(fs.existsSync(localPath)).toBe(true);
-    const blob2 = fs.readFileSync(localPath);
+      // new blob should be the same as path2
+      await syncer.getBlob(res.createdItems[0].id, localPath);
+      expect(fs.existsSync(localPath)).toBe(true);
+      const blob2 = fs.readFileSync(localPath);
 
-    expect(blob2).toEqual(fs.readFileSync(resourcePath2));
+      expect(blob2).toEqual(fs.readFileSync(resourcePath2));
 
-    // 2 blob are different, despite fetched from same id
-    expect(blob1).not.toEqual(blob2);
+      // 2 blob are different, despite fetched from same id
+      expect(blob1).not.toEqual(blob2);
 
-    // cleanup
-    fs.unlinkSync(localPath);
-    expect(fs.existsSync(localPath)).toBe(false);
-  });
+      // cleanup
+      fs.unlinkSync(localPath);
+      expect(fs.existsSync(localPath)).toBe(false);
+    }
+  );
 });

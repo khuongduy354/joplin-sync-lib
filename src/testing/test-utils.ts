@@ -10,7 +10,7 @@ import WebDAVSyncTarget from "../SyncTarget/WebDAVSyncTarget";
 let synchronizers_: Synchronizer[] = [];
 const fileApis_: Record<number, FileApi> = {};
 let currentClient_ = 1;
-let currentSyncTargetId: number = WebDAVSyncTarget.id();
+let currentSyncTargetId: number = MemorySyncTarget.id();
 
 function synchronizer(id: number = null) {
   if (id === null) id = currentClient_;
