@@ -35,7 +35,7 @@ Each sync target requires specific setup:
 
 
 1. You need a WebDAV server, you can use Joplin guide here: https://joplinapp.org/help/apps/sync/webdav/ 
-Or use this tool: https://joplinapp.org/help/apps/sync/webdav/ 
+Or use this tool: https://github.com/hacdias/webdav/, see [sample hacdias webdav config](../../../src/testing/config.yml)
 
 You need to configure username, password, and I recommend URL with a folder to store joplin data (for e.g `JoplinSync`) to avoid using root folder. 
 For e.g: root folder: `https://your-nextcloud-server/remote.php/dav/files/username/` 
