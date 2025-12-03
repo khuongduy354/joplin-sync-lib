@@ -15,8 +15,9 @@ import EncryptionService, {
 import { SyncInfoValuePublicPrivateKeyPair } from "@joplin/lib/services/synchronizer/syncInfoUtils";
 import { Item } from "../../types/item";
 import { SyncInfo } from "../../Synchronizer/syncInfoUtils";
+import { describeIfCategory, itIfCategory } from "../jest.setup";
 
-describe("Synchronizer.e2ee", () => {
+describeIfCategory("e2ee", "Synchronizer.e2ee", () => {
   beforeEach(async () => {
     loadClasses(); // override default joplin methods
     await setupDatabaseAndSynchronizer(1);

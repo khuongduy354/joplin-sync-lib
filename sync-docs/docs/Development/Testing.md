@@ -17,9 +17,11 @@ Edit `src/testing/test-utils.ts`:
 let currentSyncTargetId: number = MemorySyncTarget.id(); // ID: 5
 
 // Change to other sync targets:
-let currentSyncTargetId: number = JoplinServerSyncTarget.id(); // ID: 9
-let currentSyncTargetId: number = OneDriveSyncTarget.id();     // ID: 3
-let currentSyncTargetId: number = GoogleDriveSyncTarget.id();  // ID: 10
+let currentSyncTargetId: number = JoplinServerSyncTarget.id(); 
+let currentSyncTargetId: number = WebDAVSyncTarget.id();   
+let currentSyncTargetId: number = FileSystemSyncTarget.id(); 
+// let currentSyncTargetId: number = OneDriveSyncTarget.id(); 
+// let currentSyncTargetId: number = GoogleDriveSyncTarget.id(); 
 ```
 
 ### Sync Target Configuration
@@ -27,16 +29,30 @@ let currentSyncTargetId: number = GoogleDriveSyncTarget.id();  // ID: 10
 Each sync target requires specific setup:
 - MemorySyncTarget: no other configs needed beside above 
 - WebDAVSyncTarget:  
-use https://nextcloud.com/install/#aio to setup NextCloud
+1. Use https://nextcloud.com/install/#aio to setup NextCloud (use one click signup option or docker self-host) 
+Create a folder to store Joplin sync data, e.g., `JoplinSync`
+2. Create a `.env` file in root directory with:
+   ```bash 
+
+   WEBDAV_PATH="https://your-nextcloud-server/remote.php/dav/files/username/<your-folder>" # I suggest <your-folder> = JoplinSync and you shouldn't leave it empty (it will use root WebDAV folder)
+   WEBDAV_USERNAME="your-username"
+   WEBDAV_PASSWORD="your-password"
+   WEBDAV_IGNORE_TLS_ERRORS="true"  # optional, for self-signed certs
+   ```
+3. Run `npm run test`
 
 
 - JoplinServerSyncTarget:   
 1. create a .env in root directory similar to joplinserver.example.env
 2. run `docker run --env-file .env -p 22300:22300 joplin/server:latest` 
-3. run `npm run test` in root directory 
-4. run `docker stop <container_id_or_name>` (run `docker ps` to look for Joplin container id) to stop after done testing 
+3. open another terminal, run `npm run test` in root directory 
+4. CTRL + C to stop both JoplinServer and test when finish 
 
-- OneDriveSyncTarget:
+
+
+
+
+<!-- - OneDriveSyncTarget:
 1. **Get OAuth credentials** - Create an app in [Azure Portal](https://portal.azure.com):
    - Go to "App registrations" → "New registration"
    - Name: "Joplin Sync Test" (or any name)
@@ -117,4 +133,4 @@ use https://nextcloud.com/install/#aio to setup NextCloud
 - **Token expiration**: Cloud provider auth tokens (OneDrive, GoogleDrive) typically expire after 1 hour. If tests fail with authentication errors, regenerate a new token using the OAuth flow scripts.
 - **Clean test data**: Tests automatically clear the sync target root before and after running. For cloud providers, this means files in the app folder will be deleted.
 - **Sequential testing**: Run tests sequentially, not in parallel, when using cloud sync targets to avoid rate limiting and conflicts.
-- **Debug mode**: Set `DEBUG=true` environment variable for verbose logging during tests.
+- **Debug mode**: Set `DEBUG=true` environment variable for verbose logging during tests. -->

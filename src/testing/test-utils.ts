@@ -1,16 +1,16 @@
+import "dotenv/config";
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { FileApi } from "../FileApi/FileApi";
 import { MemorySyncTarget } from "../SyncTarget/MemorySyncTarget";
-import FileApiDriverMemory from "../FileApi/Driver/FileApiMemoryDriver";
-import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
 import JoplinServerSyncTarget from "../SyncTarget/JoplinServerSyncTarget";
 import OneDriveSyncTarget from "../SyncTarget/OneDriveSyncTarget";
 import GoogleDriveSyncTarget from "../SyncTarget/GoogleDriveSyncTarget";
+import WebDAVSyncTarget from "../SyncTarget/WebDAVSyncTarget";
 
 let synchronizers_: Synchronizer[] = [];
 const fileApis_: Record<number, FileApi> = {};
 let currentClient_ = 1;
-let currentSyncTargetId: number = OneDriveSyncTarget.id();
+let currentSyncTargetId: number = WebDAVSyncTarget.id();
 
 function synchronizer(id: number = null) {
   if (id === null) id = currentClient_;
@@ -93,6 +93,19 @@ async function setupDatabaseAndSynchronizer(id: number, options: any = {}) {
       const syncer = await syncTarget.synchronizer();
       const fileApi = await syncTarget.fileApi();
       if (!fileApis_[syncTargetId_]) fileApis_[syncTargetId_] = fileApi;
+      synchronizers_[id] = syncer;
+    } else if (syncTargetId_ === 6) {
+      // WebDAV
+      const syncTarget = new WebDAVSyncTarget(null);
+      const options = {
+        path: () => process.env.WEBDAV_PATH,
+        username: () => process.env.WEBDAV_USERNAME,
+        password: () => process.env.WEBDAV_PASSWORD,
+        ignoreTlsErrors: () => process.env.WEBDAV_IGNORE_TLS_ERRORS === "true",
+      };
+      const fileApi = await syncTarget.initFileApi(options);
+      if (!fileApis_[syncTargetId_]) fileApis_[syncTargetId_] = fileApi;
+      const syncer = await syncTarget.synchronizer();
       synchronizers_[id] = syncer;
     } else if (syncTargetId_ === 2) {
       // Filesystem

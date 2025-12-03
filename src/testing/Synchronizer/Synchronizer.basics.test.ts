@@ -7,6 +7,7 @@ import {
 import time from "../../helpers/time";
 import { createNote, loadClasses } from "../../helpers/item";
 import { CreateItem, Item } from "../../types/item";
+import { describeIfCategory, itIfCategory } from "../jest.setup";
 
 describe("Synchronizer.basics", () => {
   beforeEach(async () => {
@@ -26,7 +27,8 @@ describe("Synchronizer.basics", () => {
     await afterAllCleanUp();
   });
 
-  it("should upload/create and pull item", async () => {
+  // NO-CONFLICT API TESTS (read + create only)
+  itIfCategory("no-conflict", "should upload/create and pull item", async () => {
     const note = createNote({
       parent_id: "parent id",
     });
@@ -54,7 +56,7 @@ describe("Synchronizer.basics", () => {
     expect(allItems.length).toBeGreaterThan(0);
   });
 
-  it("should throw when upload conflicted items ids", async () => {
+  itIfCategory("no-conflict", "should throw when upload conflicted items ids", async () => {
     const note: CreateItem = createNote({
       title: "un",
       parent_id: "parent id",
@@ -71,7 +73,8 @@ describe("Synchronizer.basics", () => {
     );
   });
 
-  it("should update remote items", async () => {
+  // CONFLICTABLE API TESTS (update operations)
+  itIfCategory("conflictable", "should update remote items", async () => {
     const syncer = synchronizer(1);
     const note = createNote({
       title: "hello 1",
@@ -103,7 +106,8 @@ describe("Synchronizer.basics", () => {
     expect(res2.newItem.body).toBe(note2.body);
   });
 
-  it("should pull all remote items metadata", async () => {
+  // NO-CONFLICT API TESTS (read operations)
+  itIfCategory("no-conflict", "should pull all remote items metadata", async () => {
     // upload 1 note
     const note = createNote({
       parent_id: "parent id",
@@ -119,7 +123,7 @@ describe("Synchronizer.basics", () => {
     expect(allItems.items.some((it) => it.path === expectedPath)).toBe(true);
   });
 
-  it("should pull remote items metadata based on delta algorithm", async () => {
+  itIfCategory("no-conflict", "should pull remote items metadata based on delta algorithm", async () => {
     // upload 2 note
     const note = createNote({
       title: "un",
@@ -151,7 +155,8 @@ describe("Synchronizer.basics", () => {
     expect(allItems.items.length).toBe(0); // no new items should be pulled
   });
 
-  it("should track deleted items in get items metadata with delta algorithm", async () => {
+  // CONFLICTABLE API TESTS (delete operations involve conflict potential)
+  itIfCategory("conflictable", "should track deleted items in get items metadata with delta algorithm", async () => {
     // upload 1 note
     const note1 = createNote({
       parent_id: "parent id",
@@ -180,7 +185,8 @@ describe("Synchronizer.basics", () => {
     ).toBe(true);
   });
 
-  it("should delete remote items", async () => {
+  // CONFLICTABLE API TESTS (delete operations)
+  itIfCategory("conflictable", "should delete remote items", async () => {
     // create 1 item
     const note = createNote({
       title: "un",
@@ -207,7 +213,8 @@ describe("Synchronizer.basics", () => {
     expect(!!remote).toBe(false);
   });
 
-  it("should pull multiple remote items", async () => {
+  // NO-CONFLICT API TESTS (read operations)
+  itIfCategory("no-conflict", "should pull multiple remote items", async () => {
     const note = createNote({
       title: "un",
       parent_id: "parent id",

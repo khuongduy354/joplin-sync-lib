@@ -10,6 +10,7 @@ import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resource
 import { createResource } from "../../helpers/item";
 import BaseModel from "@joplin/lib/BaseModel";
 import { Item } from "../../types/item";
+import { itIfCategory } from "../jest.setup";
 
 describe("Synchronizer.resource", () => {
   beforeEach(async () => {
@@ -27,7 +28,8 @@ describe("Synchronizer.resource", () => {
     await afterAllCleanUp();
   });
 
-  it("should create new resource with blobs and metadata", async () => {
+  // NO-CONFLICT API TESTS (create + read)
+  itIfCategory("no-conflict", "should create new resource with blobs and metadata", async () => {
     const resourcePath = "./src/testing/resource/image.png";
     const resource = createResource({ localResourceContentPath: resourcePath });
 
@@ -52,7 +54,8 @@ describe("Synchronizer.resource", () => {
     expect(!!blob).toBe(true);
   });
 
-  it("should delete blobs and metadata", async () => {
+  // CONFLICTABLE API TESTS (delete operations)
+  itIfCategory("conflictable", "should delete blobs and metadata", async () => {
     const resourcePath = "./src/testing/resource/image.png";
     const resource = createResource({ localResourceContentPath: resourcePath });
 
@@ -82,7 +85,8 @@ describe("Synchronizer.resource", () => {
     expect(!!blob2).toBe(false);
   });
 
-  it("should upload/download resource with blob", async () => {
+  // NO-CONFLICT API TESTS (create + read)
+  itIfCategory("no-conflict", "should upload/download resource with blob", async () => {
     // prep payload
     const resourcePath = "./src/testing/resource/image.png";
     const resource = createResource({ localResourceContentPath: resourcePath });
@@ -109,7 +113,8 @@ describe("Synchronizer.resource", () => {
     expect(fs.existsSync(localPath)).toBe(false);
   });
 
-  it("should update blob data if specified", async () => {
+  // CONFLICTABLE API TESTS (update operations)
+  itIfCategory("conflictable", "should update blob data if specified", async () => {
     // prep payload
     const resourcePath1 = "./src/testing/resource/image.png";
     const resourcePath2 = "./src/testing/resource/joplin-logo.png";

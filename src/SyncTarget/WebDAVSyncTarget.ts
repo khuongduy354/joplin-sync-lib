@@ -19,7 +19,7 @@ interface CheckConfigResult {
   errorMessage: string;
 }
 
-export default class SyncTargetWebDAV extends BaseSyncTarget {
+export default class WebDAVSyncTarget extends BaseSyncTarget {
   public static id(): number {
     return 6;
   }
@@ -69,8 +69,8 @@ export default class SyncTargetWebDAV extends BaseSyncTarget {
   public static async checkConfig(
     options: WebDAVSyncOptions
   ): Promise<CheckConfigResult> {
-    const fileApi = await SyncTargetWebDAV.newFileApi_(
-      SyncTargetWebDAV.id(),
+    const fileApi = await WebDAVSyncTarget.newFileApi_(
+      WebDAVSyncTarget.id(),
       options
     );
     fileApi.requestRepeatCount_ = 0;
@@ -95,7 +95,7 @@ export default class SyncTargetWebDAV extends BaseSyncTarget {
   }
 
   public async initFileApi(options: WebDAVSyncOptions): Promise<any> {
-    const fileApi = await SyncTargetWebDAV.newFileApi_(SyncTargetWebDAV.id(), {
+    const fileApi = await WebDAVSyncTarget.newFileApi_(WebDAVSyncTarget.id(), {
       path: () => options.path(),
       username: () => options.username(),
       password: () => options.password(),
@@ -103,8 +103,9 @@ export default class SyncTargetWebDAV extends BaseSyncTarget {
     });
 
     fileApi.setLogger(this.logger());
+    this.fileApi_ = fileApi;
 
-    return fileApi;
+    return this.fileApi_;
   }
 
   protected async initSynchronizer(): Promise<any> {

@@ -12,6 +12,7 @@ import {
   setupDatabaseAndSynchronizer,
   synchronizer,
 } from "./test-utils";
+import { describeIfCategory } from "./jest.setup";
 
 // For tests with memory of file system we can use low intervals to make the tests faster.
 // However if we use such low values with network sync targets, some calls might randomly fail with
@@ -37,7 +38,8 @@ function lockHandler(): LockHandler {
   return lockHandler_;
 }
 
-describe("synchronizer_LockHandler", () => {
+// Lock tests are categorized as conflictable since they involve synchronization mechanisms
+describeIfCategory("conflictable", "synchronizer_LockHandler", () => {
   beforeEach(async () => {
     // logger.setLevel(Logger.LEVEL_WARN);
     lockHandler_ = null;

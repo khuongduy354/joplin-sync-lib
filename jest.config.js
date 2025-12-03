@@ -14,6 +14,9 @@ module.exports = {
     "\\.(ts|tsx)$": ["ts-jest", { diagnostics: false }],
   },
 
-  // setupFilesAfterEnv: [`${__dirname}/jest.setup.js`],
+  setupFilesAfterEnv: [`${__dirname}/src/testing/jest.setup.ts`],
   slowTestThreshold: 40,
+
+  // Increase timeout for network sync targets (WebDAV, OneDrive, etc.)
+  testTimeout: 60000,
 };

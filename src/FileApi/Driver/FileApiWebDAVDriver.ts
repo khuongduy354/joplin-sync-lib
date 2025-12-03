@@ -318,7 +318,7 @@ export default class FileApiDriverWebDav {
   }
 
   public initialize(): void {
-    throw new Error("Not implemented");
-    // checkProviderIsSupported(Setting.value("sync.6.path"));
+    // No initialization needed for WebDAV driver
+    // Provider check can be done in WebDAVSyncTarget.checkConfig() if needed
   }
 }

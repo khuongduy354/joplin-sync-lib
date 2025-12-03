@@ -12,6 +12,7 @@ import Synchronizer from "../Synchronizer/Synchronizer";
 import { loadClasses } from "../helpers/item";
 import { createItemsInput, getItemsInput } from "../types/apiIO";
 import { CreateItem } from "../types/item";
+import { logger } from "../helpers";
 
 // Add more sync targets as needed
 type SyncTargetType =
@@ -88,7 +89,12 @@ export class StorageAPI {
   }
 
   async init() {
-    if (this.initialized) return;
+    if (this.initialized) {
+      logger.warn(
+        "[StorageAPI] Already initialized, skipping init(), you should call it only once."
+      );
+      return;
+    }
 
     loadClasses();
 
@@ -96,6 +102,9 @@ export class StorageAPI {
     if (!SyncTargetClass)
       throw new Error(`Unknown sync target: ${this.syncTargetType}`);
 
+    logger.info(
+      `[StorageAPI] Initializing StorageAPI with sync target: ${this.syncTargetType}`
+    );
     if (this.syncTargetType === "FileSystem") {
       this.syncTarget = new SyncTargetClass(null);
       // Default path for FileSystem, can be customized via options
@@ -116,11 +125,11 @@ export class StorageAPI {
       // You may want to pass server URL, auth, etc. via options
       await this.syncTarget.initFileApi(options);
     } else if (this.syncTargetType === "WebDAV") {
+      logger.info("[StorageAPI] Initializing WebDAV sync target");
       this.syncTarget = new SyncTargetClass(null);
       const options: WebDAVSyncOptions = {
         username: () => this.options.webDAVOptions?.username || "",
         password: () => this.options.webDAVOptions?.password || "",
-
         path: () => this.options.webDAVOptions?.path || "",
         ignoreTlsErrors: () =>
           this.options.webDAVOptions?.ignoreTlsErrors || false,

@@ -4,8 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest --silent --runInBand",
-    "test:verbose": "jest --runInBand",
+    "test": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=false TEST_E2EE=false jest --silent --runInBand",
+    "test:verbose": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=false TEST_E2EE=false jest --runInBand",
+    "test:conflictable": "TEST_NO_CONFLICT_API=false TEST_CONFLICTABLE_API=true TEST_E2EE=false jest --silent --runInBand",
+    "test:e2e": "TEST_NO_CONFLICT_API=false TEST_CONFLICTABLE_API=false TEST_E2EE=true jest --silent --runInBand",
+    "test:no-conflict+e2e": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=false TEST_E2EE=true jest --silent --runInBand",
+    "test:conflictable+e2e": "TEST_NO_CONFLICT_API=false TEST_CONFLICTABLE_API=true TEST_E2EE=true jest --silent --runInBand",
+    "test:all": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=true TEST_E2EE=true jest --silent --runInBand",
+    "test:all:verbose": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=true TEST_E2EE=true jest --runInBand",
     "build": "tsc --project ./tsconfig.json",
     "dev": "tsnd --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js"

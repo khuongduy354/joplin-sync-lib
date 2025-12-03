@@ -495,10 +495,10 @@ export default class WebDavApi {
       }
       response = await uploadBlob(url, fetchOptions);
     } else if (options.target === "string") {
-      if (typeof body === "string")
-        // fetchOptions.headers["Content-Length"] = `${body.length}`;
-
-        response = await fetch(url, fetchOptions);
+      if (typeof body === "string") {
+        fetchOptions.headers["Content-Length"] = `${body.length}`;
+      }
+      response = await fetch(url, fetchOptions);
     } else {
       // file
       response = await fetchBlob(url, fetchOptions);
