@@ -1,12 +1,13 @@
 import { StorageAPI } from "../StorageAPI/StorageAPI";
 import { createNote } from "../helpers";
+import "dotenv/config";
 async function toyWEBDAV() {
   const storage = new StorageAPI("WebDAV", {
     webDAVOptions: {
-      username: "khuongduy354@gmail.com",
-      password: "1234567891Duy*",
-      path: "https://ivo.lv.tab.digital/remote.php/dav/files/khuongduy354%40gmail.com/JoplinSync",
-      ignoreTlsErrors: true,
+      username: process.env.WEBDAV_USERNAME,
+      password: process.env.WEBDAV_PASSWORD,
+      path: process.env.WEBDAV_PATH,
+      ignoreTlsErrors: process.env.WEBDAV_IGNORE_TLS_ERRORS === "true",
     },
   });
 

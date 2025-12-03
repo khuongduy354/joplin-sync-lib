@@ -209,39 +209,51 @@ export default class FileApiDriverWebDav {
 
   public async list(path: string): Promise<ListResult> {
     // See mkdir() call for explanation about trailing slash
-    const result = await this.api().execPropFind(
-      !path.endsWith("/") ? `${path}/` : path,
-      1,
-      ["d:getlastmodified", "d:resourcetype"]
-    );
+    try {
+      const result = await this.api().execPropFind(
+        !path.endsWith("/") ? `${path}/` : path,
+        1,
+        ["d:getlastmodified", "d:resourcetype"]
+      );
 
-    const resources = this.api().arrayFromJson(result, [
-      "d:multistatus",
-      "d:response",
-    ]);
+      const resources = this.api().arrayFromJson(result, [
+        "d:multistatus",
+        "d:response",
+      ]);
 
-    const stats = this.statsFromResources_(resources)
-      .map((stat) => {
-        if (path && stat.path.indexOf(`${path}/`) === 0) {
-          const s = stat.path.substr(path.length + 1);
-          if (s.split("/").length === 1) {
-            return {
-              ...stat,
-              path: stat.path.substr(path.length + 1),
-            };
+      const stats = this.statsFromResources_(resources)
+        .map((stat) => {
+          if (path && stat.path.indexOf(`${path}/`) === 0) {
+            const s = stat.path.substr(path.length + 1);
+            if (s.split("/").length === 1) {
+              return {
+                ...stat,
+                path: stat.path.substr(path.length + 1),
+              };
+            }
           }
-        }
-        return stat;
-      })
-      .filter((stat) => {
-        return stat.path !== rtrimSlashes(path);
-      });
+          return stat;
+        })
+        .filter((stat) => {
+          return stat.path !== rtrimSlashes(path);
+        });
 
-    return {
-      items: stats,
-      hasMore: false,
-      context: null,
-    };
+      return {
+        items: stats,
+        hasMore: false,
+        context: null,
+      };
+    } catch (error) {
+      // Return empty list if directory doesn't exist (consistent with MemoryDriver behavior)
+      if (error.code === 404) {
+        return {
+          items: [],
+          hasMore: false,
+          context: null,
+        };
+      }
+      throw error;
+    }
   }
 
   public async get(path: string, options?: GetOptions): Promise<any> {
@@ -290,7 +302,19 @@ export default class FileApiDriverWebDav {
     content: any,
     options: PutOptions | null = null
   ): Promise<any> {
-    return await this.api().exec("PUT", path, content, null, options);
+    try {
+      return await this.api().exec("PUT", path, content, null, options);
+    } catch (error) {
+      // 409 Conflict means parent directory doesn't exist - create it and retry
+      if (error.code === 409) {
+        const parentPath = path.substring(0, path.lastIndexOf("/"));
+        if (parentPath) {
+          await this.mkdir(parentPath);
+          return await this.api().exec("PUT", path, content, null, options);
+        }
+      }
+      throw error;
+    }
   }
 
   public async delete(path: string): Promise<void> {
@@ -313,8 +337,12 @@ export default class FileApiDriverWebDav {
   }
 
   public async clearRoot(): Promise<void> {
-    await this.delete("");
-    await this.mkdir("");
+    // Delete all contents of root folder, not the root folder itself
+    // Some WebDAV servers (e.g., hacdias/webdav) don't allow deleting the root directory
+    const items = await this.list("");
+    for (const item of items.items) {
+      await this.delete(item.path);
+    }
   }
 
   public initialize(): void {

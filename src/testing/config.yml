@@ -1,0 +1,7 @@
+address: 0.0.0.0
+port: 6065
+users:
+  - username: joplin
+    password: "1" # Your password here
+
+permissions: CRUD

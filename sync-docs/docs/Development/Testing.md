@@ -4,7 +4,9 @@
 npm run test
 ```
 
-By default, tests run against `MemorySyncTarget` (in-memory filesystem). To test other sync targets, update the sync target ID in `src/testing/test-utils.ts` and configure the required environment variables.
+By default, tests run against `MemorySyncTarget` (in-memory filesystem). To test other sync targets, update the sync target ID in `src/testing/test-utils.ts` and configure the required environment variables. 
+
+Also it will run no-conflict API tests only by default (read + create only). You can run other categories by setting environment variables as per the scripts in `package.json`.
 
 ## Testing Other Sync Targets
 
@@ -28,13 +30,21 @@ let currentSyncTargetId: number = FileSystemSyncTarget.id();
 
 Each sync target requires specific setup:
 - MemorySyncTarget: no other configs needed beside above 
-- WebDAVSyncTarget:  
-1. Use https://nextcloud.com/install/#aio to setup NextCloud (use one click signup option or docker self-host) 
-Create a folder to store Joplin sync data, e.g., `JoplinSync`
+- WebDAVSyncTarget:   
+
+
+
+1. You need a WebDAV server, you can use Joplin guide here: https://joplinapp.org/help/apps/sync/webdav/ 
+Or use this tool: https://joplinapp.org/help/apps/sync/webdav/ 
+
+You need to configure username, password, and I recommend URL with a folder to store joplin data (for e.g `JoplinSync`) to avoid using root folder. 
+For e.g: root folder: `https://your-nextcloud-server/remote.php/dav/files/username/` 
+         JoplinSync folder: `https://your-nextcloud-server/remote.php/dav/files/username/JoplinSync` 
+         local WebDAV server: `http://localhost:6065/JoplinSync` (recommended for testing purpose)
+
 2. Create a `.env` file in root directory with:
    ```bash 
-
-   WEBDAV_PATH="https://your-nextcloud-server/remote.php/dav/files/username/<your-folder>" # I suggest <your-folder> = JoplinSync and you shouldn't leave it empty (it will use root WebDAV folder)
+   WEBDAV_PATH="your-webdav-url"  
    WEBDAV_USERNAME="your-username"
    WEBDAV_PASSWORD="your-password"
    WEBDAV_IGNORE_TLS_ERRORS="true"  # optional, for self-signed certs
