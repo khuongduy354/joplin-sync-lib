@@ -1,28 +1,21 @@
-import { mailClient } from "./sample_app/mailClient";
-import { OCRService } from "./sample_app/ocrService";
-import { newItemListernerDemo } from "./sample_app/newItemListener";
-import { itemUpdaterDemo } from "./sample_app/itemUpdaterDemo";
-import { loadClasses } from "./helpers/item";
-import JoplinServerSyncTarget from "./SyncTarget/JoplinServerSyncTarget";
+// Export main API
+export { StorageAPI } from "./StorageAPI/StorageAPI";
 
-// driver code
-async function main() {
-  loadClasses();
+// Export sync targets
+export { default as JoplinServerSyncTarget } from "./SyncTarget/JoplinServerSyncTarget";
+export { FileSystemSyncTarget } from "./SyncTarget/FileSystemSyncTarget";
+export { MemorySyncTarget } from "./SyncTarget/MemorySyncTarget";
+export { default as WebDAVSyncTarget } from "./SyncTarget/WebDAVSyncTarget";
+export { default as OneDriveSyncTarget } from "./SyncTarget/OneDriveSyncTarget";
+export { default as GoogleDriveSyncTarget } from "./SyncTarget/GoogleDriveSyncTarget";
 
-  try {
-    const syncTarget = new JoplinServerSyncTarget(null);
-    const options = {
-      username: () => "admin@localhost",
-      password: () => "admin",
-      path: () => "http://localhost:22300",
-      userContentPath: () => "http://localhost:22300",
-    };
-    await syncTarget.initFileApi(options);
-    const syncer = await syncTarget.synchronizer();
-    // await syncer.
-  } catch (e) {
-    console.error(e);
-  }
-}
+// Export synchronizer
+export { default as Synchronizer } from "./Synchronizer/Synchronizer";
 
-main();
+// Export helpers
+export * from "./helpers";
+
+// Export types
+export * from "./types/apiIO";
+// export { Item } from "./types/item";
+export * from "./types/item";

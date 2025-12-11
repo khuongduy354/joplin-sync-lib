@@ -9,7 +9,7 @@ export * as ItemE2EE from "./item/itemE2EE";
 export * as ItemSetup from "./item/itemSetup";
 
 // Item module as a whole
-export * as Item from "./item";
+// export * as Item from "./item";
 
 // Other helpers
 export * from "./fetchBlob";

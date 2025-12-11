@@ -2,7 +2,8 @@
   "name": "joplin-sync",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js", 
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=false TEST_E2EE=false jest --silent --runInBand",
     "test:verbose": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=false TEST_E2EE=false jest --runInBand",
