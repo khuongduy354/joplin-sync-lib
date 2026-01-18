@@ -1,4 +1,4 @@
-import BaseItem from "@joplin/lib/models/BaseItem";
+import BaseItem from "../../joplin-lib-mock/models/BaseItem";
 import {
   afterAllCleanUp,
   setupDatabaseAndSynchronizer,
@@ -57,7 +57,7 @@ describe("Synchronizer.basics", () => {
       // check get all items work
       const allItems = await syncer.getAllItems();
       expect(allItems.length).toBeGreaterThan(0);
-    }
+    },
   );
 
   itIfCategory(
@@ -76,9 +76,9 @@ describe("Synchronizer.basics", () => {
       const res1 = await syncer.createItems({ items: [note] });
       const res2 = await syncer.createItems({ items: [note] });
       expect(res2.failedItems[0].error.message).toBe(
-        "Remote item exists, can't create. "
+        "Remote item exists, can't create. ",
       );
-    }
+    },
   );
 
   // CONFLICTABLE API TESTS (update operations)
@@ -132,7 +132,7 @@ describe("Synchronizer.basics", () => {
 
       // should includes the uploaded item
       expect(allItems.items.some((it) => it.path === expectedPath)).toBe(true);
-    }
+    },
   );
 
   itIfCategory(
@@ -158,7 +158,7 @@ describe("Synchronizer.basics", () => {
       let allItems = await syncer.getItemsMetadata();
       expect(allItems.items.length >= 2).toBe(true);
       expect(
-        allItems.items.some((it) => it.id === res.createdItems[0].id)
+        allItems.items.some((it) => it.id === res.createdItems[0].id),
       ).toBe(true);
 
       // pull a file that is 10 minutes ahead of now
@@ -168,7 +168,7 @@ describe("Synchronizer.basics", () => {
       });
 
       expect(allItems.items.length).toBe(0); // no new items should be pulled
-    }
+    },
   );
 
   // CONFLICTABLE API TESTS (delete operations involve conflict potential)
@@ -200,9 +200,9 @@ describe("Synchronizer.basics", () => {
       });
       expect(allItems.items.length >= 1).toBe(true);
       expect(
-        allItems.items.some((it) => it.id === id1 && it.isDeleted === true)
+        allItems.items.some((it) => it.id === id1 && it.isDeleted === true),
       ).toBe(true);
-    }
+    },
   );
 
   // CONFLICTABLE API TESTS (delete operations)

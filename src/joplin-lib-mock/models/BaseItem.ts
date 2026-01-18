@@ -85,10 +85,12 @@ export default class BaseItem extends BaseModel {
   }
 
   public static systemPath(itemOrId: any, extension: string = null): string {
-    return "";
+    if (extension === null) extension = "md";
+    if (typeof itemOrId === "string") return `${itemOrId}.${extension}`;
+    else return `${itemOrId.id}.${extension}`;
   }
 
   public static isSystemPath(path: string): boolean {
-    return false;
+    return path.match(/\.(md|png|jpg|jpeg|gif|webp|pdf|txt)$/i) !== null;
   }
 }

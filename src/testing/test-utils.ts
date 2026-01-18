@@ -149,6 +149,9 @@ async function afterAllCleanUp() {
       console.warn("Could not clear sync target root:", error);
     }
   }
+  
+  // Clear synchronizers array to force fresh instances in next test
+  synchronizers_ = [];
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-types, @typescript-eslint/no-explicit-any -- Old code before rule was applied, Old code before rule was applied

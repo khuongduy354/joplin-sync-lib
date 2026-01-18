@@ -57,7 +57,7 @@ describe("Synchronizer.resource", () => {
         path: resourceRemotePath(res.createdItems[0].id),
       });
       expect(!!blob).toBe(true);
-    }
+    },
   );
 
   // CONFLICTABLE API TESTS (delete operations)
@@ -122,7 +122,7 @@ describe("Synchronizer.resource", () => {
       // cleanup
       fs.unlinkSync(localPath);
       expect(fs.existsSync(localPath)).toBe(false);
-    }
+    },
   );
 
   // CONFLICTABLE API TESTS (update operations)
@@ -173,6 +173,6 @@ describe("Synchronizer.resource", () => {
       // cleanup
       fs.unlinkSync(localPath);
       expect(fs.existsSync(localPath)).toBe(false);
-    }
+    },
   );
 });

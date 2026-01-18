@@ -1,16 +1,16 @@
-import JoplinDatabase from "@joplin/lib/JoplinDatabase";
+import JoplinDatabase from "../joplin-lib-mock/JoplinDatabase";
 import { FileApi, ListOptions } from "../FileApi/FileApi";
 import { logger } from "../helpers/logger";
 import fs from "fs-extra";
-import { AppType } from "@joplin/lib/models/Setting";
+import { AppType } from "../joplin-lib-mock/models/Setting";
 import ItemUploader from "./ItemUploader";
 import { sprintf } from "sprintf-js";
 import {
   Dirnames,
   SyncAction,
-} from "@joplin/lib/services/synchronizer/utils/types";
+} from "../joplin-lib-mock/services/synchronizer/utils/types";
 import { fetchSyncInfo } from "./syncInfoUtils";
-import time from "@joplin/lib/time";
+import time from "../joplin-lib-mock/time";
 import LockHandler, {
   LockClientType,
   LockType,
@@ -18,14 +18,14 @@ import LockHandler, {
   hasActiveLock,
 } from "./Locks";
 import MigrationHandler from "./MigrationHandler";
-import BaseItem from "@joplin/lib/models/BaseItem";
-import { PaginatedList, RemoteItem } from "@joplin/lib/file-api";
-import JoplinError from "@joplin/lib/JoplinError";
-import BaseModel, { ModelType } from "@joplin/lib/BaseModel";
-import { ErrorCode } from "@joplin/lib/errors";
+import BaseItem from "../joplin-lib-mock/models/BaseItem";
+import { PaginatedList, RemoteItem } from "../joplin-lib-mock/file-api";
+import JoplinError from "../joplin-lib-mock/JoplinError";
+import BaseModel, { ModelType } from "../joplin-lib-mock/BaseModel";
+import { ErrorCode } from "../joplin-lib-mock/errors";
 import { createUUID } from "../helpers/item";
-import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
-import TaskQueue from "@joplin/lib/TaskQueue";
+import resourceRemotePath from "../joplin-lib-mock/services/synchronizer/utils/resourceRemotePath";
+import TaskQueue from "../joplin-lib-mock/TaskQueue";
 import { fullPathForSyncUpload, serializeForSync } from "../E2E";
 import {
   createItemsInput,
@@ -42,9 +42,9 @@ import {
   updateItemInput,
   updateItemOutput,
 } from "../types/apiIO";
-import { generateKeyPair } from "@joplin/lib/services/e2ee/ppk";
+import { generateKeyPair } from "../joplin-lib-mock/services/e2ee/ppk";
 import { e2eInfo } from "../types/e2eInfo";
-import EncryptionService from "@joplin/lib/services/e2ee/EncryptionService";
+import EncryptionService from "../joplin-lib-mock/services/e2ee/EncryptionService";
 import { Item } from "../types/item";
 
 export default class Synchronizer {
@@ -153,7 +153,7 @@ export default class Synchronizer {
       this.db(),
       this.lockHandler(),
       this.lockClientType(),
-      this.clientId_
+      this.clientId_,
     );
     return this.migrationHandler_;
   }
@@ -187,7 +187,7 @@ export default class Synchronizer {
     local: any = null,
     remote: RemoteItem = null,
     message: string = null,
-    actionCount = 1
+    actionCount = 1,
   ) {
     const line = ["Sync"];
     line.push(action);
@@ -300,7 +300,7 @@ export default class Synchronizer {
       locks,
       currentDate,
       this.lockHandler().lockTtl,
-      LockType.Exclusive
+      LockType.Exclusive,
     );
     if (hasActiveExclusiveLock) return "hasExclusiveLock";
 
@@ -310,7 +310,7 @@ export default class Synchronizer {
       this.lockHandler().lockTtl,
       LockType.Sync,
       this.lockClientType(),
-      this.clientId_
+      this.clientId_,
     );
     if (!hasActiveSyncLock) return "syncLockGone";
 
@@ -321,7 +321,7 @@ export default class Synchronizer {
     if (this.syncTargetIsLocked_)
       throw new JoplinError(
         "Sync target is locked - aborting API call",
-        "lockError"
+        "lockError",
       );
 
     try {
@@ -335,7 +335,7 @@ export default class Synchronizer {
       if (lockStatus) {
         throw new JoplinError(
           `Sync target lock error: ${lockStatus}. Original error was: ${error.message}`,
-          "lockError"
+          "lockError",
         );
       } else {
         throw error;
@@ -344,14 +344,14 @@ export default class Synchronizer {
   }
 
   public async verifyAndSetE2EInfo(
-    localE2EInfo: e2eInfo
+    localE2EInfo: e2eInfo,
   ): Promise<verifyAndSetE2EInfoOutput> {
     // validate e2e info (set by user)
     let localE2Ee = false;
     let localActiveMasterKeyId = null;
     if (localE2EInfo === undefined) {
       logger.info(
-        "No E2E info provided by client, assuming client E2E is disabled..."
+        "No E2E info provided by client, assuming client E2E is disabled...",
       );
     } else {
       localE2Ee = !!localE2EInfo.e2ee;
@@ -361,7 +361,7 @@ export default class Synchronizer {
     // fetch remote sync info
     const remoteInfo = await fetchSyncInfo(this.api());
     const remoteActiveMK = ["", null, undefined].includes(
-      remoteInfo.activeMasterKeyId
+      remoteInfo.activeMasterKeyId,
     )
       ? null
       : remoteInfo.activeMasterKeyId;
@@ -374,7 +374,7 @@ export default class Synchronizer {
       logger.warn(
         "Synchronizer.verifyAndSetE2EInfo: Encryption mismatched!: ",
         e2eeMismatched,
-        activeMasterKeyIdMismatched
+        activeMasterKeyIdMismatched,
       );
       logger.warn("rmeote info: ", remoteInfo);
       logger.warn("Remote E2Ee : ", remoteInfo.e2ee);
@@ -386,9 +386,9 @@ export default class Synchronizer {
         message: e2eeMismatched
           ? "E2E mismatched\n"
           : "" + activeMasterKeyIdMismatched
-          ? "Master key mismatched\n"
-          : "" +
-            "Use Synchronizer.verifyAndSetE2EInfo() to setup E2E properly with the returned remoteInfo below: ",
+            ? "Master key mismatched\n"
+            : "" +
+              "Use Synchronizer.verifyAndSetE2EInfo() to setup E2E properly with the returned remoteInfo below: ",
         remoteInfo, // use this to reconfigure client
       };
     }
@@ -459,7 +459,7 @@ export default class Synchronizer {
 
     if (!remoteInfo.version) {
       throw new Error(
-        "No remote sync info file found. Please initialize sync target with client first."
+        "No remote sync info file found. Please initialize sync target with client first.",
       );
     }
 
@@ -467,13 +467,13 @@ export default class Synchronizer {
 
     if (remoteInfo.version !== 3)
       throw new Error(
-        `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`
+        `Sync API supports sync version 3, your version is ${remoteInfo.version}, which is not supported.`,
       );
 
     const e2eCheck = await this.verifyAndSetE2EInfo(this.e2eInfo());
     if (e2eCheck.status != "succeeded")
       throw new Error(
-        "Remote and local's E2E are different, use Synchronizer.verifyAndSetE2EInfo() to setup properly!"
+        "Remote and local's E2E are different, use Synchronizer.verifyAndSetE2EInfo() to setup properly!",
       );
   }
 
@@ -487,7 +487,7 @@ export default class Synchronizer {
       allItemIdsHandler: async () => {
         return [];
       },
-    }
+    },
   ): Promise<getItemsMetadataOutput> {
     await this.verifySyncInfo();
 
@@ -505,12 +505,12 @@ export default class Synchronizer {
         allItemIdsHandler: options.allItemIdsHandler,
         wipeOutFailSafe: false, // TODO: remove this
         logger: console,
-      }
+      },
     );
 
     // assign ids to items
     deltaResult.items.forEach(
-      (item) => (item.id = BaseItem.pathToId(item.path))
+      (item) => (item.id = BaseItem.pathToId(item.path)),
     );
 
     return deltaResult;
@@ -547,7 +547,7 @@ export default class Synchronizer {
         "fetchingProcessed",
         null,
         null,
-        "Processing fetched item"
+        "Processing fetched item",
       );
       const path = BaseItem.systemPath(remoteId);
       if (!BaseItem.isSystemPath(path)) continue; // The delta API might return things like the .sync, .resource or the root folder
@@ -570,7 +570,7 @@ export default class Synchronizer {
           loadContent().then((content) => {
             resolve(content);
           });
-        })
+        }),
       );
     }
     result = await Promise.all(queueDownloads);
@@ -580,7 +580,7 @@ export default class Synchronizer {
 
   // GET single item based on path or id
   public async getItem(
-    options: getItemInput = { unserializeItem: false }
+    options: getItemInput = { unserializeItem: false },
   ): Promise<getItemOutput> {
     await this.verifySyncInfo();
     let item = null;
@@ -647,18 +647,18 @@ export default class Synchronizer {
       // if no conflict found, update the item
       // acquire lock
       logger.info(
-        "No remote changes since last sync, proceeding to update the data..."
+        "No remote changes since last sync, proceeding to update the data...",
       );
       const syncLock = await this.lockHandler().acquireLock(
         LockType.Sync,
         this.lockClientType(),
-        this.clientId_
+        this.clientId_,
       );
 
       this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
         logger.warn(
           "Could not refresh lock - cancelling sync. Error was:",
-          error
+          error,
         );
         this.syncTargetIsLocked_ = true;
         void this.cancel();
@@ -694,7 +694,7 @@ export default class Synchronizer {
       const content = await serializeForSync(
         newItem,
         this.e2eInfo(),
-        this.encryptionService()
+        this.encryptionService(),
       );
       await itemUploader.serializeAndUploadItem(path, newItem, content);
 
@@ -712,7 +712,7 @@ export default class Synchronizer {
 
         if (!fs.existsSync(localResourceContentPath)) {
           throw new Error(
-            "Blob not found in path: " + localResourceContentPath
+            "Blob not found in path: " + localResourceContentPath,
           );
         }
 
@@ -722,7 +722,7 @@ export default class Synchronizer {
 
         if (resource.size >= 10 * 1000 * 1000) {
           logger.warn(
-            `Uploading a large resource (resourceId: ${resource.id}, size:${resource.size} bytes) which may tie up the sync process.`
+            `Uploading a large resource (resourceId: ${resource.id}, size:${resource.size} bytes) which may tie up the sync process.`,
           );
         }
 
@@ -730,7 +730,7 @@ export default class Synchronizer {
           "Uploading resource from local path: ",
           localResourceContentPath,
           "to remote: ",
-          remoteContentPath
+          remoteContentPath,
         );
         await this.apiCall("put", remoteContentPath, null, {
           path: localResourceContentPath,
@@ -744,7 +744,7 @@ export default class Synchronizer {
         await this.lockHandler().releaseLock(
           LockType.Sync,
           this.lockClientType(),
-          this.clientId_
+          this.clientId_,
         );
       }
       this.syncTargetIsLocked_ = false;
@@ -761,19 +761,19 @@ export default class Synchronizer {
     }
   }
   public async deleteItems(
-    options: deleteItemsInput
+    options: deleteItemsInput,
   ): Promise<deleteItemOutput[]> {
     await this.verifySyncInfo();
     const syncLock = await this.lockHandler().acquireLock(
       LockType.Sync,
       this.lockClientType(),
-      this.clientId_
+      this.clientId_,
     );
 
     this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
       logger.warn(
         "Could not refresh lock - cancelling sync. Error was:",
-        error
+        error,
       );
       this.syncTargetIsLocked_ = true;
       void this.cancel();
@@ -807,7 +807,7 @@ export default class Synchronizer {
           SyncAction.DeleteRemote,
           null,
           { id: item.id },
-          "local has been deleted"
+          "local has been deleted",
         );
       } catch (error) {
         if (error.code === "isReadOnly") {
@@ -831,14 +831,14 @@ export default class Synchronizer {
       await this.lockHandler().releaseLock(
         LockType.Sync,
         this.lockClientType(),
-        this.clientId_
+        this.clientId_,
       );
     }
     return deletedItemsReport;
   }
 
   public async createItems(
-    options: createItemsInput
+    options: createItemsInput,
   ): Promise<createItemsOutput> {
     // preparation step
     await this.verifySyncInfo();
@@ -865,7 +865,7 @@ export default class Synchronizer {
         this.api().supportsAccurateTimestamp
       }; supportsMultiPut = ${
         this.api().supportsMultiPut
-      }} [${synchronizationId}]`
+      }} [${synchronizationId}]`,
     );
 
     // Before synchronising make sure all share_id properties are set
@@ -879,13 +879,13 @@ export default class Synchronizer {
     syncLock = await this.lockHandler().acquireLock(
       LockType.Sync,
       this.lockClientType(),
-      this.clientId_
+      this.clientId_,
     );
 
     this.lockHandler().startAutoLockRefresh(syncLock, (error: any) => {
       logger.warn(
         "Could not refresh lock - cancelling sync. Error was:",
-        error
+        error,
       );
       this.syncTargetIsLocked_ = true;
       void this.cancel();
@@ -949,9 +949,9 @@ export default class Synchronizer {
         throw new JoplinError(
           sprintf(
             "Processing a path that has already been done: %s. sync_time was not updated? Remote item has an updated_time in the future?",
-            path
+            path,
           ),
-          "processingPathTwice"
+          "processingPathTwice",
         );
 
       const remote: RemoteItem = await this.apiCall("stat", path);
@@ -988,7 +988,7 @@ export default class Synchronizer {
           const remoteContentPath = resourceRemotePath(local.id);
           const { path: encryptedPath, resource } = await fullPathForSyncUpload(
             local,
-            this.e2eInfo().e2ee
+            this.e2eInfo().e2ee,
           ); // will encrypt path if E2E is on, else it's the same path as user provided
 
           if (!encryptedPath)
@@ -1008,7 +1008,7 @@ export default class Synchronizer {
 
           if (local.size >= 10 * 1000 * 1000) {
             logger.warn(
-              `Uploading a large resource (resourceId: ${local.id}, size:${local.size} bytes) which may tie up the sync process.`
+              `Uploading a large resource (resourceId: ${local.id}, size:${local.size} bytes) which may tie up the sync process.`,
             );
           }
 
@@ -1016,7 +1016,7 @@ export default class Synchronizer {
             "Uploading resource from local path: ",
             encryptedPath,
             "to remote: ",
-            remoteContentPath
+            remoteContentPath,
           );
           await this.apiCall("put", remoteContentPath, null, {
             path: encryptedPath,
@@ -1035,7 +1035,7 @@ export default class Synchronizer {
           const content = await serializeForSync(
             local,
             this.e2eInfo(),
-            this.encryptionService()
+            this.encryptionService(),
           );
           await itemUploader.serializeAndUploadItem(path, local, content);
         } catch (error) {
@@ -1067,7 +1067,7 @@ export default class Synchronizer {
       await this.lockHandler().releaseLock(
         LockType.Sync,
         this.lockClientType(),
-        this.clientId_
+        this.clientId_,
       );
     }
     this.syncTargetIsLocked_ = false;
@@ -1078,7 +1078,7 @@ export default class Synchronizer {
       "finished",
       null,
       null,
-      `Synchronisation finished [${synchronizationId}]`
+      `Synchronisation finished [${synchronizationId}]`,
     );
 
     logger.info("progressReport_: ", this.progressReport_);

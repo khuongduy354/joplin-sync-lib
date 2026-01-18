@@ -1,10 +1,10 @@
-import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
+import { Dirnames } from "../joplin-lib-mock/services/synchronizer/utils/types";
 // import shim from "../../shim";
-import JoplinError from "@joplin/lib/JoplinError";
+import JoplinError from "../joplin-lib-mock/JoplinError";
 // import time from "@joplin/lib/time";
 import { FileApi } from "../FileApi/FileApi";
-import { AppType } from "@joplin/lib/models/Setting";
-import { fileExtension, filename } from "@joplin/lib/path-utils";
+import { AppType } from "../joplin-lib-mock/models/Setting";
+import { fileExtension, filename } from "../joplin-lib-mock/path-utils";
 
 export enum LockType {
   None = 0,
@@ -32,7 +32,7 @@ function lockIsActive(lock: Lock, currentDate: Date, lockTtl: number): boolean {
 
 export function lockNameToObject(
   name: string,
-  updatedTime: number = null
+  updatedTime: number = null,
 ): Lock {
   const p = name.split("_");
 
@@ -64,7 +64,7 @@ export function hasActiveLock(
   lockTtl: number,
   lockType: LockType,
   clientType: LockClientType = null,
-  clientId: string = null
+  clientId: string = null,
 ) {
   const lock = activeLock(
     locks,
@@ -72,7 +72,7 @@ export function hasActiveLock(
     lockTtl,
     lockType,
     clientType,
-    clientId
+    clientId,
   );
   return !!lock;
 }
@@ -86,14 +86,14 @@ export function activeLock(
   lockTtl: number,
   lockType: LockType,
   clientType: LockClientType = null,
-  clientId: string = null
+  clientId: string = null,
 ) {
   if (lockType === LockType.Exclusive) {
     const activeLocks = locks
       .slice()
       .filter(
         (lock: Lock) =>
-          lockIsActive(lock, currentDate, lockTtl) && lock.type === lockType
+          lockIsActive(lock, currentDate, lockTtl) && lock.type === lockType,
       )
       .sort((a: Lock, b: Lock) => {
         if (a.updatedTime === b.updatedTime) {
@@ -244,7 +244,7 @@ export default class LockHandler {
 
   private async acquireSyncLock(
     clientType: LockClientType,
-    clientId: string
+    clientId: string,
   ): Promise<Lock> {
     if (this.useBuiltInLocks)
       return this.api_.acquireLock(LockType.Sync, clientType, clientId);
@@ -263,16 +263,16 @@ export default class LockHandler {
             this.lockTtl,
             LockType.Sync,
             clientType,
-            clientId
+            clientId,
           ),
         ]);
 
         if (exclusiveLock) {
           throw new JoplinError(
             `Cannot acquire sync lock because the following client has an exclusive lock on the sync target: ${this.lockToClientString(
-              exclusiveLock
+              exclusiveLock,
             )}`,
-            "hasExclusiveLock"
+            "hasExclusiveLock",
           );
         }
 
@@ -289,7 +289,7 @@ export default class LockHandler {
         // it back. Could be application error or server issue.
         if (!isFirstPass)
           throw new Error(
-            "Cannot acquire sync lock: either the lock could be written but not read back. Or it was expired before it was read again."
+            "Cannot acquire sync lock: either the lock could be written but not read back. Or it was expired before it was read again.",
           );
 
         await this.saveLock({
@@ -313,7 +313,7 @@ export default class LockHandler {
   private async acquireExclusiveLock(
     clientType: LockClientType,
     clientId: string,
-    options: AcquireLockOptions = null
+    options: AcquireLockOptions = null,
   ): Promise<Lock> {
     if (this.useBuiltInLocks)
       return this.api_.acquireLock(LockType.Exclusive, clientType, clientId);
@@ -344,7 +344,7 @@ export default class LockHandler {
         await new Promise((resolve) =>
           setTimeout(() => {
             resolve(1);
-          }, 2000)
+          }, 2000),
         );
         return true;
       }
@@ -372,9 +372,9 @@ export default class LockHandler {
             if (await waitForTimeout()) continue;
             throw new JoplinError(
               `Cannot acquire exclusive lock because the following clients have a sync lock on the target: ${this.lockToClientString(
-                activeSyncLock
+                activeSyncLock,
               )}`,
-              "hasSyncLock"
+              "hasSyncLock",
             );
           }
         }
@@ -389,9 +389,9 @@ export default class LockHandler {
             if (await waitForTimeout()) continue;
             throw new JoplinError(
               `Cannot acquire exclusive lock because the following client has an exclusive lock on the sync target: ${this.lockToClientString(
-                activeExclusiveLock
+                activeExclusiveLock,
               )}`,
-              "hasExclusiveLock"
+              "hasExclusiveLock",
             );
           }
         } else {
@@ -427,7 +427,7 @@ export default class LockHandler {
     const handle = this.autoLockRefreshHandle(lock);
     if (this.refreshTimers_[handle]) {
       throw new Error(
-        `There is already a timer refreshing this lock: ${handle}`
+        `There is already a timer refreshing this lock: ${handle}`,
       );
     }
 
@@ -458,7 +458,7 @@ export default class LockHandler {
           this.lockTtl,
           lock.type,
           lock.clientType,
-          lock.clientId
+          lock.clientId,
         )
       ) {
         // If the previous lock has expired, we shouldn't try to acquire a new one. This is because other clients might have performed
@@ -508,7 +508,7 @@ export default class LockHandler {
     lockType: LockType,
     clientType: LockClientType,
     clientId: string,
-    options: AcquireLockOptions = null
+    options: AcquireLockOptions = null,
   ): Promise<Lock> {
     options = {
       ...defaultAcquireLockOptions(),
@@ -527,7 +527,7 @@ export default class LockHandler {
   public async releaseLock(
     lockType: LockType,
     clientType: LockClientType,
-    clientId: string
+    clientId: string,
   ) {
     if (this.useBuiltInLocks) {
       await this.api_.releaseLock(lockType, clientType, clientId);
@@ -539,7 +539,7 @@ export default class LockHandler {
         type: lockType,
         clientType: clientType,
         clientId: clientId,
-      })
+      }),
     );
   }
 }
