@@ -2,8 +2,8 @@ import { BaseSyncTarget } from "./BaseSyncTarget";
 import { FileApi } from "../FileApi/FileApi";
 import FileApiDriverLocal from "../FileApi/Driver/FsDriver/file-api-driver-local";
 import Synchronizer from "../Synchronizer/Synchronizer";
-import { AppType } from "@joplin/lib/models/Setting";
-import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
+import { AppType } from "../joplin-lib-mock/models/Setting";
+import { Dirnames } from "../joplin-lib-mock/services/synchronizer/utils/types";
 
 export class FileSystemSyncTarget extends BaseSyncTarget {
   public static id() {

@@ -1,7 +1,7 @@
 import { MultiPutItem } from "../FileApi";
-import JoplinError from "@joplin/lib/JoplinError";
+import JoplinError from "../../joplin-lib-mock/JoplinError";
 import JoplinServerApi from "../JoplinServerApi";
-import { trimSlashes } from "@joplin/lib/path-utils";
+import { trimSlashes } from "../../joplin-lib-mock/path-utils";
 import { Lock, LockClientType, LockType } from "../../Synchronizer/Locks";
 
 // All input paths should be in the format: "path/to/file". This is converted to

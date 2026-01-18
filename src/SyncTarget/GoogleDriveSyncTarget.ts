@@ -1,5 +1,5 @@
 import GoogleDriveApi from "../FileApi/GoogleDriveApi";
-import { _ } from "@joplin/lib/locale";
+import { _ } from "../joplin-lib-mock/locale";
 import { BaseSyncTarget } from "./BaseSyncTarget";
 import { parameters_ } from "../helpers/parameter";
 import { FileApi } from "../FileApi/FileApi";

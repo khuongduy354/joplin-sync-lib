@@ -1,7 +1,7 @@
 import LockHandler, { LockClientType, LockType } from "./Locks";
-import BaseService from "@joplin/lib/services/BaseService";
+import BaseService from "../joplin-lib-mock/services/BaseService";
 import { FileApi } from "../FileApi/FileApi";
-import JoplinDatabase from "@joplin/lib/JoplinDatabase";
+import JoplinDatabase from "../joplin-lib-mock/JoplinDatabase";
 import { uploadSyncInfo, SyncInfo } from "./syncInfoUtils";
 
 export type MigrationFunction = (

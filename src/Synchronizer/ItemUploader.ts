@@ -1,9 +1,9 @@
-import JoplinError from "@joplin/lib/JoplinError";
-import { ModelType } from "@joplin/lib/BaseModel";
+import JoplinError from "../joplin-lib-mock/JoplinError";
+import { ModelType } from "../joplin-lib-mock/BaseModel";
 import Logger from "@joplin/utils/Logger";
-import { BaseItemEntity } from "@joplin/lib/services/database/types";
-import { ApiCallFunction } from "@joplin/lib/services/synchronizer/utils/types";
-import BaseItem from "@joplin/lib/models/BaseItem";
+import { BaseItemEntity } from "../joplin-lib-mock/services/database/types";
+import { ApiCallFunction } from "../joplin-lib-mock/services/synchronizer/utils/types";
+import BaseItem from "../joplin-lib-mock/models/BaseItem";
 import { FileApi, MultiPutItem } from "../FileApi/FileApi";
 
 const logger = Logger.create("ItemUploader");

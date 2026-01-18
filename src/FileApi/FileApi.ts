@@ -2,7 +2,7 @@ import { singleton } from "../singleton";
 import { helperMisc } from "../helpers/misc";
 import { isHidden } from "@joplin/utils/path";
 import { Lock, LockClientType, LockType } from "../Synchronizer/Locks";
-import BaseItem from "@joplin/lib/models/BaseItem";
+import BaseItem from "../joplin-lib-mock/models/BaseItem";
 import time from "../helpers/time";
 import { logger, Logger } from "../helpers/logger";
 const Mutex = require("async-mutex").Mutex;

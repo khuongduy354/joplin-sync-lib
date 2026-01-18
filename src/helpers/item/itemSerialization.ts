@@ -1,7 +1,7 @@
-import BaseModel, { ModelType } from "@joplin/lib/BaseModel";
-import BaseItem from "@joplin/lib/models/BaseItem";
+import BaseModel, { ModelType } from "../../joplin-lib-mock/BaseModel";
+import BaseItem from "../../joplin-lib-mock/models/BaseItem";
 import moment from "moment";
-import Database from "@joplin/lib/database";
+import Database from "../../joplin-lib-mock/database";
 
 function unserialize_format(type: ModelType, propName: string, propValue: any) {
   if (propName[propName.length - 1] === "_") return propValue; // Private property

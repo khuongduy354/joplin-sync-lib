@@ -1,7 +1,7 @@
 // const { basicDelta } = require("./file-api");
 import { basicDelta } from "../FileApi";
-import { rtrimSlashes, ltrimSlashes } from "@joplin/lib/path-utils";
-import JoplinError from "@joplin/lib/JoplinError";
+import { rtrimSlashes, ltrimSlashes } from "../../joplin-lib-mock/path-utils";
+import JoplinError from "../../joplin-lib-mock/JoplinError";
 // const Setting = require("./models/Setting").default;
 // const checkProviderIsSupported = require("./utils/webDAVUtils").default;
 import WebDavApi from "../WebDAVApi";

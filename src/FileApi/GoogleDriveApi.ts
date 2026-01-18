@@ -1,7 +1,7 @@
 import { singleton } from "../singleton";
 import time from "../helpers/time";
 import Logger from "@joplin/utils/Logger";
-import { _ } from "@joplin/lib/locale";
+import { _ } from "../joplin-lib-mock/locale";
 import { helperMisc } from "../helpers/misc";
 import { fetchBlob, uploadBlob } from "../helpers/fetchBlob";
 import { Buffer } from "buffer";

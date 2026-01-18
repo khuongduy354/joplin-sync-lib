@@ -1,7 +1,7 @@
-import JoplinError from "@joplin/lib/JoplinError";
-import BaseItem from "@joplin/lib/models/BaseItem";
-import { BaseItemEntity } from "@joplin/lib/services/database/types";
-import EncryptionService from "@joplin/lib/services/e2ee/EncryptionService";
+import JoplinError from "../joplin-lib-mock/JoplinError";
+import BaseItem from "../joplin-lib-mock/models/BaseItem";
+import { BaseItemEntity } from "../joplin-lib-mock/services/database/types";
+import EncryptionService from "../joplin-lib-mock/services/e2ee/EncryptionService";
 import { EncryptionMethod, e2eInfo } from "../types/e2eInfo";
 import { logger } from "../helpers/logger";
 

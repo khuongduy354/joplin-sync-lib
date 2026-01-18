@@ -1,11 +1,11 @@
 import Logger from "@joplin/utils/Logger";
 import { FileApi } from "../FileApi/FileApi";
-import JoplinDatabase from "@joplin/lib/JoplinDatabase";
+import JoplinDatabase from "../joplin-lib-mock/JoplinDatabase";
 import { compareVersions } from "compare-versions";
-import JoplinError from "@joplin/lib/JoplinError";
-import { ErrorCode } from "@joplin/lib/errors";
-import { PublicPrivateKeyPair } from "@joplin/lib/services/e2ee/ppk";
-import { MasterKeyEntity } from "@joplin/lib/services/e2ee/types";
+import JoplinError from "../joplin-lib-mock/JoplinError";
+import { ErrorCode } from "../joplin-lib-mock/errors";
+import { PublicPrivateKeyPair } from "../joplin-lib-mock/services/e2ee/ppk";
+import { MasterKeyEntity } from "../joplin-lib-mock/services/database/types";
 const fastDeepEqual = require("fast-deep-equal");
 
 const logger = Logger.create("syncInfoUtils");
@@ -72,7 +72,7 @@ const fixSyncInfo = (syncInfo: SyncInfo) => {
       !syncInfo.masterKeys.find((mk) => mk.id === syncInfo.activeMasterKeyId)
     ) {
       logger.warn(
-        `Sync info is using a non-existent key as the active key - clearing it: ${syncInfo.activeMasterKeyId}`
+        `Sync info is using a non-existent key as the active key - clearing it: ${syncInfo.activeMasterKeyId}`,
       );
       syncInfo.activeMasterKeyId = "";
     }
@@ -128,11 +128,11 @@ export class SyncInfo {
     if (filtered.ppk.value) {
       filtered.ppk.value.privateKey.ciphertext = `${filtered.ppk.value.privateKey.ciphertext.substr(
         0,
-        20
+        20,
       )}...${filtered.ppk.value.privateKey.ciphertext.substr(-20)}`;
       filtered.ppk.value.publicKey = `${filtered.ppk.value.publicKey.substr(
         0,
-        40
+        40,
       )}...`;
     }
     return filtered;
@@ -159,7 +159,7 @@ export class SyncInfo {
     // in that case we assume they've been used at least once.
     for (const mk of this.masterKeys_) {
       if (!("hasBeenUsed" in mk) || mk.hasBeenUsed === undefined) {
-        mk.hasBeenUsed = true;
+        mk.hasBeenUsed = 1;
       }
     }
   }
@@ -260,6 +260,6 @@ export const checkIfCanSync = (s: SyncInfo, appVersion: string) => {
   if (compareVersions(appVersion, s.appMinVersion) < 0)
     throw new JoplinError(
       "In order to synchronise, please upgrade your application to version %s+",
-      ErrorCode.MustUpgradeApp
+      ErrorCode.MustUpgradeApp,
     );
 };

@@ -1,10 +1,9 @@
 import { singleton } from "../singleton";
 // import { _ } from "./locale";
 // import shim from "@joplin/lib/shim";
-import { rtrimSlashes } from "@joplin/lib/path-utils";
-import JoplinError from "@joplin/lib/JoplinError";
-import { Env } from "@joplin/lib/models/Setting";
-import { helperMisc } from "../helpers/misc";
+import { rtrimSlashes } from "../joplin-lib-mock/path-utils";
+import JoplinError from "../joplin-lib-mock/JoplinError";
+import { Env } from "../joplin-lib-mock/models/Setting";
 import { fetchBlob, uploadBlob } from "../helpers/fetchBlob";
 // import Logger from "@joplin/utils/Logger";
 // import personalizedUserContentBaseUrl from "./services/joplinServer/personalizedUserContentBaseUrl";
@@ -12,7 +11,7 @@ import { fetchBlob, uploadBlob } from "../helpers/fetchBlob";
 // import { getApplicationInformation } from "./services/joplinCloudUtils";
 
 //TODO: fix query string stringfiy
-const { stringify } = require("query-string");
+import { helperMisc } from "../joplin-lib-mock/helpers/misc";
 
 const logger = console;
 
@@ -182,7 +181,7 @@ export default class JoplinServerApi {
     query: Record<string, any> = null,
     body: any = null,
     headers: any = null,
-    options: ExecOptions = null
+    options: ExecOptions = null,
   ) {
     if (headers === null) headers = {};
     if (options === null) options = {};
@@ -213,7 +212,7 @@ export default class JoplinServerApi {
       }
 
       fetchOptions.headers["Content-Length"] = `${helperMisc.stringByteLength(
-        fetchOptions.body
+        fetchOptions.body,
       )}`;
     }
 
@@ -221,7 +220,7 @@ export default class JoplinServerApi {
 
     if (query) {
       url += url.indexOf("?") < 0 ? "?" : "&";
-      url += stringify(query);
+      url += helperMisc.objectToQueryString(query);
     }
 
     const startTime = Date.now();
@@ -246,9 +245,8 @@ export default class JoplinServerApi {
         response = await uploadBlob(url, fetchOptions);
       } else if (options.target === "string") {
         if (typeof body === "string")
-          fetchOptions.headers[
-            "Content-Length"
-          ] = `${helperMisc.stringByteLength(body)}`;
+          fetchOptions.headers["Content-Length"] =
+            `${helperMisc.stringByteLength(body)}`;
         response = await fetch(url, fetchOptions);
       } else {
         // file
@@ -262,7 +260,7 @@ export default class JoplinServerApi {
           "Response",
           Date.now() - startTime,
           options.responseFormat,
-          responseText
+          responseText,
         );
       }
 
@@ -278,7 +276,7 @@ export default class JoplinServerApi {
         return new JoplinError(
           message,
           code,
-          `${method} ${path}: ${message} (${code}): ${shortResponseText()}`
+          `${method} ${path}: ${message} (${code}): ${shortResponseText()}`,
         );
       };
 
@@ -297,7 +295,7 @@ export default class JoplinServerApi {
         if (options.target === "file")
           throw newError(
             `Cannot transfer file: ${await response.text()}`,
-            response.status
+            response.status,
           );
 
         let json = null;
@@ -310,7 +308,7 @@ export default class JoplinServerApi {
         if (json && json.error) {
           throw newError(
             `${json.error}`,
-            json.code ? json.code : response.status
+            json.code ? json.code : response.status,
           );
         }
 
@@ -331,7 +329,7 @@ export default class JoplinServerApi {
         throw newError(
           `Error ${response.status} 
           : ${shortResponseText()}`,
-          response.status
+          response.status,
         );
       }
 
@@ -360,7 +358,7 @@ export default class JoplinServerApi {
     query: Record<string, any> = null,
     body: any = null,
     headers: any = null,
-    options: ExecOptions = null
+    options: ExecOptions = null,
   ) {
     for (let i = 0; i < 2; i++) {
       try {
@@ -370,14 +368,14 @@ export default class JoplinServerApi {
           query,
           body,
           headers,
-          options
+          options,
         );
         return response;
       } catch (error) {
         if (error.code === 403 && i === 0) {
           logger.info(
             "Session expired or invalid - trying to login again",
-            error
+            error,
           );
           this.session_ = null; // By setting it to null, the service will try to login again
         } else {

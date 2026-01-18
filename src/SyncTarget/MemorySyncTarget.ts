@@ -3,8 +3,8 @@ import { FileApi } from "../FileApi/FileApi";
 // const FileApiDriverMemory = require("./file-api-driver-memory").default;
 import FileApiDriverMemory from "../FileApi/Driver/FileApiMemoryDriver";
 import Synchronizer from "../Synchronizer/Synchronizer";
-import { AppType } from "@joplin/lib/models/Setting";
-import { Dirnames } from "@joplin/lib/services/synchronizer/utils/types";
+import { AppType } from "../joplin-lib-mock/models/Setting";
+import { Dirnames } from "../joplin-lib-mock/services/synchronizer/utils/types";
 
 export class MemorySyncTarget extends BaseSyncTarget {
   static id() {

@@ -1,12 +1,12 @@
-import BaseItem from "@joplin/lib/models/BaseItem";
-import Resource from "@joplin/lib/models/Resource";
-import Note from "@joplin/lib/models/Note";
-import Folder from "@joplin/lib/models/Folder";
+import BaseItem from "../../joplin-lib-mock/models/BaseItem";
+import Resource from "../../joplin-lib-mock/models/Resource";
+import Note from "../../joplin-lib-mock/models/Note";
+import Folder from "../../joplin-lib-mock/models/Folder";
 import shim from "@joplin/lib/shim";
 import crypto from "crypto";
 //@ts-ignore
 import sjcl from "@joplin/lib/vendor/sjcl.js";
-import Setting, { AppType } from "@joplin/lib/models/Setting";
+import Setting, { AppType } from "../../joplin-lib-mock/models/Setting";
 import { MODEL_FIELD_NAMES } from "./itemLegacy";
 import { ModelType } from "../../Model";
 import { serializeModel, unserializeWithoutSQLite } from "./itemSerialization";
@@ -41,8 +41,8 @@ export function loadClasses() {
   };
 
   shim.sjclModule = sjcl;
-  Setting.constants_.appId = "Sync API";
-  Setting.constants_.appType = AppType.Desktop;
+  Setting.constants_.set("appId", "Sync API");
+  Setting.constants_.set("appType", AppType.Desktop);
   shim.setTimeout = setTimeout;
   shim.waitForFrame = () => {};
   shim.clearTimeout = clearTimeout;

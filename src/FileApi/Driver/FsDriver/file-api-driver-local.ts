@@ -1,4 +1,4 @@
-import JoplinError from "@joplin/lib/JoplinError";
+import JoplinError from "../../../joplin-lib-mock/JoplinError";
 
 import {
   DeltaOptions,

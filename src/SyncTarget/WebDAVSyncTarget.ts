@@ -1,4 +1,4 @@
-import { AppType } from "@joplin/lib/models/Setting";
+import { AppType } from "../joplin-lib-mock/models/Setting";
 import { BaseSyncTarget } from "./BaseSyncTarget";
 import { FileApi } from "../FileApi/FileApi";
 import Synchronizer from "../Synchronizer/Synchronizer";

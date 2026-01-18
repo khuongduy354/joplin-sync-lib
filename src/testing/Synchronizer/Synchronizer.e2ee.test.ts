@@ -11,8 +11,8 @@ import {
 } from "../../helpers/item";
 import EncryptionService, {
   EncryptionMethod,
-} from "@joplin/lib/services/e2ee/EncryptionService";
-import { SyncInfoValuePublicPrivateKeyPair } from "@joplin/lib/services/synchronizer/syncInfoUtils";
+} from "../../joplin-lib-mock/services/e2ee/EncryptionService";
+import { SyncInfoValuePublicPrivateKeyPair } from "../../joplin-lib-mock/services/synchronizer/syncInfoUtils";
 import { Item } from "../../types/item";
 import { SyncInfo } from "../../Synchronizer/syncInfoUtils";
 import { describeIfCategory, itIfCategory } from "../jest.setup";

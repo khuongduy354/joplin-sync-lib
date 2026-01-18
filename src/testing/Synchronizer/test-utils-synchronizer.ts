@@ -1,9 +1,9 @@
-import BaseModel from "@joplin/lib/BaseModel";
+import BaseModel from "../../joplin-lib-mock/BaseModel";
 import { fileApi } from "../test-utils";
-import Folder from "@joplin/lib/models/Folder";
-import Note from "@joplin/lib/models/Note";
-import BaseItem from "@joplin/lib/models/BaseItem";
-import { FolderEntity, NoteEntity } from "@joplin/lib/services/database/types";
+import Folder from "../../joplin-lib-mock/models/Folder";
+import Note from "../../joplin-lib-mock/models/Note";
+import BaseItem from "../../joplin-lib-mock/models/BaseItem";
+import { FolderEntity, NoteEntity } from "../../joplin-lib-mock/services/database/types";
 
 export async function allNotesFolders() {
   const folders = await Folder.all();

@@ -4,7 +4,7 @@ import Synchronizer from "../Synchronizer/Synchronizer";
 import JoplinServerApi from "../FileApi/JoplinServerApi";
 import { BaseSyncTarget } from "./BaseSyncTarget";
 import { FileApi } from "../FileApi/FileApi";
-import { AppType, Env } from "@joplin/lib/models/Setting";
+import { AppType, Env } from "../joplin-lib-mock/models/Setting";
 // import Logger from "@joplin/utils/Logger";
 
 // const staticLogger = Logger.create("SyncTargetJoplinServer");

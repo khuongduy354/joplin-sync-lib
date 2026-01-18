@@ -1,11 +1,10 @@
 import { singleton } from "../singleton";
 import time from "../helpers/time";
 import Logger from "@joplin/utils/Logger";
-import { _ } from "@joplin/lib/locale";
+import { _ } from "../joplin-lib-mock/locale";
 import { helperMisc } from "../helpers/misc";
 import { fetchBlob, uploadBlob } from "../helpers/fetchBlob";
 import { Buffer } from "buffer";
-const { stringify } = require("query-string");
 
 const logger = Logger.create("OneDriveApi");
 
@@ -27,7 +26,7 @@ export default class OneDriveApi {
   public constructor(
     clientId: string,
     clientSecret: string,
-    isPublic: boolean
+    isPublic: boolean,
   ) {
     this.clientId_ = clientId;
     this.clientSecret_ = clientSecret;
@@ -91,7 +90,7 @@ export default class OneDriveApi {
     const driveId = this.accountProperties_.driveId;
     const r = await this.execJson(
       "GET",
-      `/me/drives/${driveId}/special/approot`
+      `/me/drives/${driveId}/special/approot`,
     );
     return `${r.parentReference.path}/${r.name}`;
   }
@@ -104,8 +103,8 @@ export default class OneDriveApi {
       redirect_uri: redirectUri,
       prompt: "login",
     };
-    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${stringify(
-      query
+    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${helperMisc.objectToQueryString(
+      query,
     )}`;
   }
 
@@ -129,7 +128,7 @@ export default class OneDriveApi {
     if (!r.ok) {
       const text = await r.text();
       throw new Error(
-        `Could not retrieve auth code: ${r.status}: ${r.statusText}: ${text}`
+        `Could not retrieve auth code: ${r.status}: ${r.statusText}: ${text}`,
       );
     }
 
@@ -165,7 +164,7 @@ export default class OneDriveApi {
     url: string,
     handle: any,
     buffer: any,
-    options: any
+    options: any,
   ) {
     options = { ...options };
     if (!options.method) {
@@ -179,7 +178,7 @@ export default class OneDriveApi {
     if (buffer) {
       options.body = buffer.slice(
         options.startByte,
-        options.startByte + options.contentLength
+        options.startByte + options.contentLength,
       );
     } else {
       const chunk = await singleton
@@ -240,7 +239,7 @@ export default class OneDriveApi {
           logger.debug(
             `Uploading File Fragment ${(startByte / 1048576).toFixed(2)} - ${(
               endByte / 1048576
-            ).toFixed(2)} from ${(byteSize / 1048576).toFixed(2)} Mbit ...`
+            ).toFixed(2)} from ${(byteSize / 1048576).toFixed(2)} Mbit ...`,
           );
           const headers = {
             "Content-Length": contentLength,
@@ -265,7 +264,7 @@ export default class OneDriveApi {
           `Couldn't upload ${type} > 4 Mb. Got unhandled error:`,
           error ? error.code : "",
           error ? error.message : "",
-          error
+          error,
         );
         throw error;
       } finally {
@@ -310,7 +309,7 @@ export default class OneDriveApi {
     path: string,
     query: any = null,
     data: any = null,
-    options: any = null
+    options: any = null,
   ) {
     if (!path) throw new Error("Path is required");
 
@@ -341,7 +340,7 @@ export default class OneDriveApi {
 
     if (query) {
       url += url.indexOf("?") < 0 ? "?" : "&";
-      url += stringify(query);
+      url += helperMisc.objectToQueryString(query);
     }
 
     if (data) options.body = data;
@@ -350,14 +349,13 @@ export default class OneDriveApi {
 
     for (let i = 0; i < 5; i++) {
       options.headers["Authorization"] = `bearer ${this.token()}`;
-      options.headers[
-        "User-Agent"
-      ] = `ISV|Joplin|Joplin/${singleton.appVersion()}`;
+      options.headers["User-Agent"] =
+        `ISV|Joplin|Joplin/${singleton.appVersion()}`;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
       const handleRequestRepeat = async (
         error: any,
-        sleepSeconds: number = null
+        sleepSeconds: number = null,
       ) => {
         sleepSeconds ??= (i + 1) * 5;
         logger.info(`Got error below - retrying (${i})...`);
@@ -393,7 +391,7 @@ export default class OneDriveApi {
             "Got unhandled error:",
             error ? error.code : "",
             error ? error.message : "",
-            error
+            error,
           );
           throw error;
         }
@@ -470,7 +468,7 @@ export default class OneDriveApi {
           }
 
           logger.info(
-            `OneDrive Throttle, sync thread sleeping for ${sleepSeconds} seconds...`
+            `OneDrive Throttle, sync thread sleeping for ${sleepSeconds} seconds...`,
           );
           await handleRequestRepeat(error, sleepSeconds);
           continue;
@@ -494,7 +492,7 @@ export default class OneDriveApi {
     }
 
     throw new Error(
-      `Could not execute request after multiple attempts: ${method} ${url}`
+      `Could not execute request after multiple attempts: ${method} ${url}`,
     );
   }
 
@@ -507,7 +505,7 @@ export default class OneDriveApi {
     try {
       const response = await this.exec(
         "GET",
-        "https://graph.microsoft.com/v1.0/me/drive"
+        "https://graph.microsoft.com/v1.0/me/drive",
       );
       const data = await response.json();
       const accountProperties = {
@@ -517,7 +515,7 @@ export default class OneDriveApi {
       return accountProperties;
     } catch (error) {
       throw new Error(
-        `Could not retrieve account details (drive ID, Account type. Error code: ${error.code}, Error message: ${error.message}`
+        `Could not retrieve account details (drive ID, Account type. Error code: ${error.code}, Error message: ${error.message}`,
       );
     }
   }
@@ -527,7 +525,7 @@ export default class OneDriveApi {
     method: string,
     path: string,
     query: any = null,
-    data: any = null
+    data: any = null,
   ) {
     const response = await this.exec(method, path, query, data);
     const errorResponseText = await response.text();
@@ -546,7 +544,7 @@ export default class OneDriveApi {
     method: string,
     path: string,
     query: any = null,
-    data: any = null
+    data: any = null,
   ) {
     const response = await this.exec(method, path, query, data);
     const output = await response.text();
@@ -558,8 +556,8 @@ export default class OneDriveApi {
       this.setAuth(null);
       throw new Error(
         _(
-          "Cannot refresh token: authentication data is missing. Starting the synchronisation again may fix the problem."
-        )
+          "Cannot refresh token: authentication data is missing. Starting the synchronisation again may fix the problem.",
+        ),
       );
     }
 

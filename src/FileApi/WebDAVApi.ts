@@ -5,11 +5,11 @@ const parseXmlString = require("xml2js").parseString;
 
 const URL = require("url-parse");
 // const { _ } = require("./locale");
-import JoplinError from "@joplin/lib/JoplinError";
+import JoplinError from "../joplin-lib-mock/JoplinError";
 import { fetchBlob, uploadBlob } from "../helpers";
 
 const base64 = require("base-64");
-import { rtrimSlashes, ltrimSlashes } from "@joplin/lib/path-utils";
+import { rtrimSlashes, ltrimSlashes } from "../joplin-lib-mock/path-utils";
 
 interface WebDavApiOptions {
   baseUrl(): string;
@@ -107,7 +107,7 @@ export default class WebDavApi {
       // Tried various things like the below, but it didn't work on React Native:
       // return base64.encode(utf8.encode(this.options_.username() + ':' + this.options_.password()));
       return base64.encode(
-        `${this.options_.username()}:${this.options_.password()}`
+        `${this.options_.username()}:${this.options_.password()}`,
       );
     } catch (error) {
       error.message = `Cannot encode username/password: ${error.message}`;
@@ -177,7 +177,7 @@ export default class WebDavApi {
   public valueFromJson(
     json: any,
     keys: (string | number)[],
-    type: string
+    type: string,
   ): any {
     let output = json;
 
@@ -235,7 +235,7 @@ export default class WebDavApi {
   public resourcePropByName(
     resource: any,
     outputType: string,
-    propName: string
+    propName: string,
   ): any {
     const propStats = resource["d:propstat"];
     let output = null;
@@ -255,7 +255,7 @@ export default class WebDavApi {
       if (!output)
         throw new JoplinError(
           `String property not found: ${propName}: ${JSON.stringify(resource)}`,
-          "stringNotFound"
+          "stringNotFound",
         );
 
       // If the XML has not attribute the value is directly a string
@@ -283,7 +283,7 @@ export default class WebDavApi {
     path: string,
     depth: number,
     fields: string[] | null = null,
-    options: ExecOptions | null = null
+    options: ExecOptions | null = null,
   ): Promise<any> {
     if (fields === null) fields = ["d:getlastmodified"];
 
@@ -328,7 +328,7 @@ export default class WebDavApi {
 
   private handleNginxHack_(
     jsonResponse: any,
-    newErrorHandler: (message: string, code: number) => Error
+    newErrorHandler: (message: string, code: number) => Error,
   ): void {
     // Trying to fix 404 error issue with Nginx WebDAV server.
     // https://github.com/laurent22/joplin/issues/624
@@ -422,7 +422,7 @@ export default class WebDavApi {
     path: string = "",
     body: any = null,
     headers: Record<string, any> | null = null,
-    options: ExecOptions | null = null
+    options: ExecOptions | null = null,
   ): Promise<any> {
     headers = { ...headers };
     options = { ...options };
@@ -459,7 +459,7 @@ export default class WebDavApi {
     // Also add a random value to make sure the eTag is unique for each call.
     if (["GET", "HEAD"].indexOf(method) < 0)
       headers["If-None-Match"] = `JoplinIgnore-${Math.floor(
-        Math.random() * 100000
+        Math.random() * 100000,
       )}`;
     if (!headers["User-Agent"]) headers["User-Agent"] = "Joplin/1.0";
 
@@ -498,7 +498,7 @@ export default class WebDavApi {
       if (typeof body === "string") {
         fetchOptions.headers["Content-Length"] = `${body.length}`;
       }
-      response = await fetch(url, fetchOptions);
+      response = await fetch(url, fetchOptions as any);
     } else {
       // file
       response = await fetchBlob(url, fetchOptions);
@@ -517,7 +517,7 @@ export default class WebDavApi {
       const shortResponseText = `${responseText}`.substr(0, 1024);
       return new JoplinError(
         `${method} ${path}: ${message} (${code}): ${shortResponseText}`,
-        code
+        code,
       );
     };
 

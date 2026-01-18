@@ -1,6 +1,6 @@
 import moment from "moment";
 import { basicDelta } from "../FileApi";
-import { dirname, basename, ltrimSlashes } from "@joplin/lib/path-utils";
+import { dirname, basename, ltrimSlashes } from "../../joplin-lib-mock/path-utils";
 import { singleton } from "../../singleton";
 import { Buffer } from "buffer";
 

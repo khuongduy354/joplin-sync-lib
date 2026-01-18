@@ -1,4 +1,4 @@
-import BaseItem from "@joplin/lib/models/BaseItem";
+import BaseItem from "../../joplin-lib-mock/models/BaseItem";
 import {
   afterAllCleanUp,
   setupDatabaseAndSynchronizer,
@@ -6,9 +6,9 @@ import {
 } from "../test-utils";
 import { loadClasses } from "../../helpers/item";
 import fs from "fs-extra";
-import resourceRemotePath from "@joplin/lib/services/synchronizer/utils/resourceRemotePath";
+import resourceRemotePath from "../../joplin-lib-mock/services/synchronizer/utils/resourceRemotePath";
 import { createResource } from "../../helpers/item";
-import BaseModel from "@joplin/lib/BaseModel";
+import BaseModel from "../../joplin-lib-mock/BaseModel";
 import { Item } from "../../types/item";
 import { itIfCategory } from "../jest.setup";
 

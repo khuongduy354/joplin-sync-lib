@@ -2,7 +2,7 @@ import { FileSystemSyncTarget } from "../SyncTarget/FileSystemSyncTarget";
 import {
   ResourceEntity,
   ResourceOcrStatus,
-} from "@joplin/lib/services/database/types";
+} from "../joplin-lib-mock/services/database/types";
 import Synchronizer from "../Synchronizer/Synchronizer";
 import { createResource } from "../helpers/item";
 import { Item } from "../types/item";
