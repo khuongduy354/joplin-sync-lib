@@ -10,7 +10,7 @@ import WebDAVSyncTarget from "../SyncTarget/WebDAVSyncTarget";
 let synchronizers_: Synchronizer[] = [];
 const fileApis_: Record<number, FileApi> = {};
 let currentClient_ = 1;
-let currentSyncTargetId: number = WebDAVSyncTarget.id();
+let currentSyncTargetId: number = MemorySyncTarget.id();
 
 function synchronizer(id: number = null) {
   if (id === null) id = currentClient_;
@@ -155,7 +155,7 @@ async function afterAllCleanUp() {
 async function expectThrow(
   asyncFn: Function,
   errorCode: any = undefined,
-  errorMessage: string = undefined
+  errorMessage: string = undefined,
 ) {
   let hasThrown = false;
   let thrownError = null;
@@ -171,7 +171,7 @@ async function expectThrow(
   } else if (errorMessage !== undefined) {
     if (thrownError.message !== errorMessage) {
       expect(`error message: ${thrownError.message}`).toBe(
-        `error message: ${errorMessage}`
+        `error message: ${errorMessage}`,
       );
     } else {
       expect(true).toBe(true);
