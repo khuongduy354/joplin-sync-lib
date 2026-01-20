@@ -6,7 +6,7 @@ import { uploadSyncInfo, SyncInfo } from "./syncInfoUtils";
 
 export type MigrationFunction = (
   api: FileApi,
-  db: JoplinDatabase
+  db: JoplinDatabase,
 ) => Promise<void>;
 
 interface SyncTargetInfo {
@@ -25,7 +25,7 @@ export default class MigrationHandler extends BaseService {
     db: JoplinDatabase,
     lockHandler: LockHandler,
     clientType: LockClientType,
-    clientId: string
+    clientId: string,
   ) {
     super();
     this.api_ = api;
@@ -64,7 +64,7 @@ export default class MigrationHandler extends BaseService {
       {
         clearExistingSyncLocksFromTheSameClient: true,
         timeoutMs: 1000 * 30,
-      }
+      },
     );
 
     let autoLockError = null;
@@ -99,7 +99,7 @@ export default class MigrationHandler extends BaseService {
       await this.lockHandler_.releaseLock(
         LockType.Exclusive,
         this.clientType_,
-        this.clientId_
+        this.clientId_,
       );
       // this.logger().info("MigrationHandler: Released exclusive lock");
     }

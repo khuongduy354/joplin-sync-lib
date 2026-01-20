@@ -1,6 +1,6 @@
 import JoplinError from "../joplin-lib-mock/JoplinError";
 import { ModelType } from "../joplin-lib-mock/BaseModel";
-import Logger from "@joplin/utils/Logger";
+import Logger from "../joplin-lib-mock/Logger";
 import { BaseItemEntity } from "../joplin-lib-mock/services/database/types";
 import { ApiCallFunction } from "../joplin-lib-mock/services/synchronizer/utils/types";
 import BaseItem from "../joplin-lib-mock/models/BaseItem";
@@ -35,7 +35,7 @@ export default class ItemUploader {
   public async serializeAndUploadItem(
     path: string,
     local: BaseItemEntity,
-    content: string
+    content: string,
   ) {
     const preUploadItem = this.preUploadedItems_[path];
     if (preUploadItem) {
@@ -47,14 +47,14 @@ export default class ItemUploader {
         // edited just at the same time. In that case, we proceed with
         // the regular upload.
         logger.warn(
-          `Pre-uploaded item updated_time has changed. It is going to be re-uploaded again: ${path} (From ${this.preUploadedItemUpdatedTimes_[path]} to ${local.updated_time})`
+          `Pre-uploaded item updated_time has changed. It is going to be re-uploaded again: ${path} (From ${this.preUploadedItemUpdatedTimes_[path]} to ${local.updated_time})`,
         );
       } else {
         const error = preUploadItem.error;
         if (error)
           throw new JoplinError(
             error.message ? error.message : "Unknown pre-upload error",
-            error.code
+            error.code,
           );
         return;
       }

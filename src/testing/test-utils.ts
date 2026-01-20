@@ -111,9 +111,16 @@ async function setupDatabaseAndSynchronizer(id: number, options: any = {}) {
       // Filesystem
     } else {
       // memory sync target as default testing
+      // All clients must share the same FileApi so locks work correctly
       const syncTarget = new MemorySyncTarget(null);
-      const fileApi = await syncTarget.initFileApi();
-      if (!fileApis_[syncTargetId_]) fileApis_[syncTargetId_] = fileApi;
+      if (fileApis_[syncTargetId_]) {
+        // Use existing shared fileApi
+        syncTarget.setFileApi(fileApis_[syncTargetId_]);
+      } else {
+        // First client - create and store fileApi
+        const fileApi = await syncTarget.initFileApi();
+        fileApis_[syncTargetId_] = fileApi;
+      }
       const syncer = await syncTarget.synchronizer();
       synchronizers_[id] = syncer;
     }
@@ -149,7 +156,7 @@ async function afterAllCleanUp() {
       console.warn("Could not clear sync target root:", error);
     }
   }
-  
+
   // Clear synchronizers array to force fresh instances in next test
   synchronizers_ = [];
 }

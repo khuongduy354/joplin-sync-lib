@@ -209,7 +209,7 @@ export default class LockHandler {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
   private lockFileToObject(file: any): Lock {
-    return lockNameToObject(filename(file.path), file.updated_time);
+    return lockNameToObject(filename(file.path, false), file.updated_time);
   }
 
   public async locks(lockType: LockType = null): Promise<Lock[]> {

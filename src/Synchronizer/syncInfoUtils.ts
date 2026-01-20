@@ -1,4 +1,4 @@
-import Logger from "@joplin/utils/Logger";
+import Logger from "../joplin-lib-mock/Logger";
 import { FileApi } from "../FileApi/FileApi";
 import JoplinDatabase from "../joplin-lib-mock/JoplinDatabase";
 import { compareVersions } from "compare-versions";

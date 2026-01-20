@@ -1,4 +1,4 @@
-const Logger = require("@joplin/utils/Logger").default;
+const Logger = require("../joplin-lib-mock/Logger").default;
 import { singleton } from "../singleton";
 // import shim from "@joplin/lib/shim";
 const parseXmlString = require("xml2js").parseString;

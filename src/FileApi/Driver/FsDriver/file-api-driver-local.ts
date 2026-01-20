@@ -9,7 +9,26 @@ import {
   basicDelta,
 } from "../../FileApi";
 import FsDriverBase, { Stat } from "./FsDriverBase";
-import FsDriverNode from "./FsDriverNode";
+
+// Conditional import based on environment
+let FsDriver: any;
+let isBrowser = false;
+
+try {
+  if (typeof window !== "undefined") {
+    isBrowser = true;
+  }
+} catch (e) {
+  isBrowser = true;
+}
+
+if (isBrowser) {
+  const { default: FsDriverBrowser } = require("./FsDriverBrowser");
+  FsDriver = FsDriverBrowser;
+} else {
+  const { default: FsDriverNode } = require("./FsDriverNode");
+  FsDriver = FsDriverNode;
+}
 
 // NOTE: when synchronising with the file system the time resolution is the second (unlike milliseconds for OneDrive for instance).
 // What it means is that if, for example, client 1 changes a note at time t, and client 2 changes the same note within the same second,
@@ -25,7 +44,7 @@ import FsDriverNode from "./FsDriverNode";
 // will have been modified at the same exact second at some point. If not, it's another bug that needs to be investigated.
 
 export default class FileApiDriverLocal {
-  public static fsDriver_: FsDriverBase = new FsDriverNode();
+  public static fsDriver_: FsDriverBase = new FsDriver();
 
   private fsErrorToJsError_(error: JoplinError, path: string | null = null) {
     let msg = error.toString();
@@ -81,7 +100,7 @@ export default class FileApiDriverLocal {
 
   public async delta(
     path: string,
-    options: DeltaOptions
+    options: DeltaOptions,
   ): Promise<PaginatedList> {
     const getStatFn = async (path: string) => {
       const stats = await this.fsDriver().readDirStats(path);

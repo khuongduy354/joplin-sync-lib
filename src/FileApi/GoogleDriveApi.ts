@@ -1,6 +1,6 @@
 import { singleton } from "../singleton";
 import time from "../helpers/time";
-import Logger from "@joplin/utils/Logger";
+import Logger from "../joplin-lib-mock/Logger";
 import { _ } from "../joplin-lib-mock/locale";
 import { helperMisc } from "../helpers/misc";
 import { fetchBlob, uploadBlob } from "../helpers/fetchBlob";
@@ -25,7 +25,7 @@ export default class GoogleDriveApi {
   public constructor(
     clientId: string,
     clientSecret: string,
-    isPublic: boolean
+    isPublic: boolean,
   ) {
     this.clientId_ = clientId;
     this.clientSecret_ = clientSecret;
@@ -127,7 +127,7 @@ export default class GoogleDriveApi {
     if (!r.ok) {
       const text = await r.text();
       throw new Error(
-        `Could not retrieve auth token: ${r.status}: ${r.statusText}: ${text}`
+        `Could not retrieve auth token: ${r.status}: ${r.statusText}: ${text}`,
       );
     }
 
@@ -205,7 +205,7 @@ export default class GoogleDriveApi {
     url: string,
     query: any = null,
     body: any = null,
-    options: any = null
+    options: any = null,
   ) {
     options = options || {};
 
@@ -290,7 +290,7 @@ export default class GoogleDriveApi {
     method: string,
     url: string,
     query: any = null,
-    body: any = null
+    body: any = null,
   ): Promise<any> {
     const response = await this.makeRequest(method, url, query, body);
     return await response.json();
@@ -303,7 +303,7 @@ export default class GoogleDriveApi {
     method: string,
     url: string,
     query: any = null,
-    body: any = null
+    body: any = null,
   ): Promise<string> {
     const response = await this.makeRequest(method, url, query, body);
     return await response.text();
@@ -317,7 +317,7 @@ export default class GoogleDriveApi {
     url: string,
     query: any = null,
     body: any = null,
-    options: any = null
+    options: any = null,
   ): Promise<Response> {
     return await this.makeRequest(method, url, query, body, options);
   }
@@ -328,7 +328,7 @@ export default class GoogleDriveApi {
   public async listFiles(
     folderId: string = "appDataFolder",
     pageToken: string | null = null,
-    pageSize: number = 1000
+    pageSize: number = 1000,
   ) {
     const query: any = {
       spaces: folderId === "appDataFolder" ? "appDataFolder" : "drive",
@@ -366,7 +366,7 @@ export default class GoogleDriveApi {
       `/files/${fileId}`,
       { alt: "media" },
       null,
-      options
+      options,
     );
   }
 
@@ -378,7 +378,7 @@ export default class GoogleDriveApi {
     content: any,
     mimeType: string = "text/plain",
     folderId: string = "appDataFolder",
-    options: any = null
+    options: any = null,
   ) {
     const metadata = {
       name: name,
@@ -421,7 +421,7 @@ export default class GoogleDriveApi {
     fileId: string,
     content: any,
     mimeType: string = "text/plain",
-    options: any = null
+    options: any = null,
   ) {
     const url = `${this.UPLOAD_BASE}/files/${fileId}?uploadType=media`;
 

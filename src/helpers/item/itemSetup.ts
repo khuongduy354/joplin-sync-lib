@@ -2,10 +2,9 @@ import BaseItem from "../../joplin-lib-mock/models/BaseItem";
 import Resource from "../../joplin-lib-mock/models/Resource";
 import Note from "../../joplin-lib-mock/models/Note";
 import Folder from "../../joplin-lib-mock/models/Folder";
-import shim from "@joplin/lib/shim";
+import shim from "../../joplin-lib-mock/shim";
 import crypto from "crypto";
-//@ts-ignore
-import sjcl from "@joplin/lib/vendor/sjcl.js";
+import sjcl from "../../joplin-lib-mock/vendor/sjcl";
 import Setting, { AppType } from "../../joplin-lib-mock/models/Setting";
 import { MODEL_FIELD_NAMES } from "./itemLegacy";
 import { ModelType } from "../../Model";
