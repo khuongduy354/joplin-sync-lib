@@ -2,7 +2,7 @@
 let time: any = {};
 import Setting from "../../../joplin-lib-mock/models/Setting";
 import { filename, fileExtension } from "../../../joplin-lib-mock/path-utils";
-const md5 = require("md5");
+import md5 from "md5";
 import { Buffer } from "buffer";
 
 export interface Stat {

@@ -5,7 +5,7 @@ import { Lock, LockClientType, LockType } from "../Synchronizer/Locks";
 import BaseItem from "../joplin-lib-mock/models/BaseItem";
 import time from "../helpers/time";
 import { logger, Logger } from "../helpers/logger";
-const Mutex = require("async-mutex").Mutex;
+import { Mutex } from "async-mutex";
 
 export interface MultiPutItem {
   name: string;

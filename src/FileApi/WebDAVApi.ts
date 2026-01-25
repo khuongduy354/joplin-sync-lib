@@ -1,14 +1,14 @@
-const Logger = require("../joplin-lib-mock/Logger").default;
+import Logger from "../joplin-lib-mock/Logger";
 import { singleton } from "../singleton";
 // import shim from "@joplin/lib/shim";
-const parseXmlString = require("xml2js").parseString;
+import { parseString as parseXmlString } from "xml2js";
 
-const URL = require("url-parse");
+import URL from "url-parse";
 // const { _ } = require("./locale");
 import JoplinError from "../joplin-lib-mock/JoplinError";
 import { fetchBlob, uploadBlob } from "../helpers";
 
-const base64 = require("base-64");
+import base64 from "base-64";
 import { rtrimSlashes, ltrimSlashes } from "../joplin-lib-mock/path-utils";
 
 interface WebDavApiOptions {

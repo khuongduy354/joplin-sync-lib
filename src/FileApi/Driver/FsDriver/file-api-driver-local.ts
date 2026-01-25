@@ -9,25 +9,31 @@ import {
   basicDelta,
 } from "../../FileApi";
 import FsDriverBase, { Stat } from "./FsDriverBase";
+import FsDriverBrowser from "./FsDriverBrowser";
 
 // Conditional import based on environment
 let FsDriver: any;
 let isBrowser = false;
 
 try {
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
     isBrowser = true;
   }
 } catch (e) {
-  isBrowser = true;
+  isBrowser = false;
 }
 
+// Select the appropriate driver
 if (isBrowser) {
-  const { default: FsDriverBrowser } = require("./FsDriverBrowser");
   FsDriver = FsDriverBrowser;
 } else {
-  const { default: FsDriverNode } = require("./FsDriverNode");
-  FsDriver = FsDriverNode;
+  // Use Node.js driver - will fail in browser but that's okay
+  try {
+    const { default: FsDriverNode } = require("./FsDriverNode");
+    FsDriver = FsDriverNode;
+  } catch (e) {
+    FsDriver = FsDriverBrowser;
+  }
 }
 
 // NOTE: when synchronising with the file system the time resolution is the second (unlike milliseconds for OneDrive for instance).

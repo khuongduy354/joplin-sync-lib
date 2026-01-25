@@ -24,6 +24,7 @@ export interface DeleteOptions {
 	deleteChildren?: boolean;
 	trackDeleted?: boolean;
 	disableReadOnlyCheck?: boolean;
+	sourceDescription?: string;
 }
 
 export default class BaseModel {
@@ -129,5 +130,53 @@ export default class BaseModel {
 			if (eName === name) return e[1];
 		}
 		throw new Error(`Unknown model name: ${name}`);
+	}
+
+	// Stub implementations for methods used by BaseItem
+	public static async load(id: string, options: any = null): Promise<any> {
+		// Mock implementation - override in subclasses
+		return null;
+	}
+
+	public static async loadByField(field: string, value: any, options: any = null): Promise<any> {
+		// Mock implementation - override in subclasses
+		return null;
+	}
+
+	public static async loadByFields(fields: any, options: any = null): Promise<any> {
+		// Mock implementation - override in subclasses
+		return null;
+	}
+
+	public static async modelSelectAll(sql: string): Promise<any[]> {
+		// Mock implementation - override in subclasses
+		return [];
+	}
+
+	public static escapeIdsForSql(ids: string[]): string {
+		// Escape IDs for SQL IN clause
+		return ids.map(id => `'${id.replace(/'/g, "''")}'`).join(',');
+	}
+
+	public static async batchDelete(ids: string[], options: DeleteOptions = {}): Promise<void> {
+		// Mock implementation - override in subclasses
+		console.log('BaseModel.batchDelete called with', ids.length, 'ids');
+	}
+
+	public static filter(item: any): any {
+		// Remove undefined values and return a clean object
+		const output: any = {};
+		for (const key in item) {
+			if (item[key] !== undefined) {
+				output[key] = item[key];
+			}
+		}
+		return output;
+	}
+
+	public static fieldNames(param?: any): string[] {
+		// Override in subclasses to return field names
+		// param can be boolean (withPrefix) or string (context) depending on subclass
+		return [];
 	}
 }

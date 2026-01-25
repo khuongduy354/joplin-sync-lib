@@ -2,6 +2,7 @@ import BaseItem from "../../joplin-lib-mock/models/BaseItem";
 import Resource from "../../joplin-lib-mock/models/Resource";
 import Note from "../../joplin-lib-mock/models/Note";
 import Folder from "../../joplin-lib-mock/models/Folder";
+import Revision from "../../joplin-lib-mock/models/Revision";
 import shim from "../../joplin-lib-mock/shim";
 import crypto from "crypto";
 import sjcl from "../../joplin-lib-mock/vendor/sjcl";
@@ -32,6 +33,7 @@ export function loadClasses() {
   BaseItem.loadClass("Note", Note);
   BaseItem.loadClass("Resource", Resource);
   BaseItem.loadClass("Folder", Folder);
+  BaseItem.loadClass("Revision", Revision);
 
   // for encryption only
   shim.randomBytes = async (count: number) => {

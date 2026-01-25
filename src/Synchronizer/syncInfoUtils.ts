@@ -6,7 +6,7 @@ import JoplinError from "../joplin-lib-mock/JoplinError";
 import { ErrorCode } from "../joplin-lib-mock/errors";
 import { PublicPrivateKeyPair } from "../joplin-lib-mock/services/e2ee/ppk";
 import { MasterKeyEntity } from "../joplin-lib-mock/services/database/types";
-const fastDeepEqual = require("fast-deep-equal");
+import fastDeepEqual from "fast-deep-equal";
 
 const logger = Logger.create("syncInfoUtils");
 

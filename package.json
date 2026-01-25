@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=false TEST_E2EE=false jest --silent --runInBand",
+    "test": "npm run test:conflictable",
     "test:verbose": "TEST_NO_CONFLICT_API=true TEST_CONFLICTABLE_API=false TEST_E2EE=false jest --runInBand",
     "test:conflictable": "TEST_NO_CONFLICT_API=false TEST_CONFLICTABLE_API=true TEST_E2EE=false jest --silent --runInBand",
     "test:e2e": "TEST_NO_CONFLICT_API=false TEST_CONFLICTABLE_API=false TEST_E2EE=true jest --silent --runInBand",

@@ -228,9 +228,11 @@ export class StorageAPI {
         ids: options.ids,
         unserializeAll: options.unserializeAll || false,
       };
+      logger.info("[StorageAPI.getItems] Fetching items with IDs:", options.ids);
       const result = await this.syncer.getItems(input);
       return result;
     } else {
+      logger.info("[StorageAPI.getItems] Fetching all items");
       return this.syncer.getAllItems({
         unserializeAll: options?.unserializeAll || false,
       });
