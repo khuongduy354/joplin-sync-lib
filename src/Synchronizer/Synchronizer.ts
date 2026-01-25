@@ -518,11 +518,44 @@ export default class Synchronizer {
   public async getAllItems(options?: ListOptions): Promise<getItemsOutput> {
     await this.verifySyncInfo();
 
-    // call list api
+    // call list api to get metadata
     const result = await this.apiCall("list", "", options || {});
-
-    if ("items" in result) return result.items;
-    return result;
+    
+    let items = "items" in result ? result.items : result;
+    
+    logger.info("[Synchronizer.getAllItems] Raw items from list:", items);
+    logger.info("[Synchronizer.getAllItems] unserializeAll option:", options?.unserializeAll);
+    
+    // If unserializeAll is true, fetch and unserialize all items
+    if (options?.unserializeAll && items.length > 0) {
+      // Extract IDs from all items (view will filter later)
+      const ids = items
+        .filter((item: any) => item.path && item.path.endsWith('.md'))
+        .map((item: any) => {
+          const id = BaseItem.pathToId(item.path);
+          console.log("[Synchronizer.getAllItems] Path:", item.path, "-> ID:", id);
+          return id;
+        });
+      
+      console.log("[Synchronizer.getAllItems] Fetching items with IDs:", ids);
+      
+      if (ids.length === 0) {
+        console.log("[Synchronizer.getAllItems] No .md items found, returning empty array");
+        return [];
+      }
+      
+      // Use getItems to fetch and unserialize all items
+      const unserializedItems = await this.getItems({
+        ids,
+        unserializeAll: true,
+      });
+      
+      console.log("[Synchronizer.getAllItems] Unserialized items:", unserializedItems);
+      
+      return unserializedItems;
+    }
+    
+    return items;
   }
 
   public async getItems(options: getItemsInput): Promise<getItemsOutput> {
