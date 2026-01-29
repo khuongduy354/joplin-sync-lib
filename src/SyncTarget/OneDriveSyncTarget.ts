@@ -13,6 +13,7 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
   private context_: any = null;
   private oauthFlowHandler_: ((url: string) => Promise<string>) | null = null;
   private redirectUri_: string | null = null;
+  private customBasePath_: string | null = null; // Custom path to override appDirectory
 
   public static id() {
     return 3;
@@ -22,12 +23,13 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
   public constructor(db: any, options: any = null) {
     super(db, options);
     this.api_ = null;
-    // Options can include: authToken, context, clientId, clientSecret, isPublic, oauthFlowHandler, redirectUri
+    // Options can include: authToken, context, clientId, clientSecret, isPublic, oauthFlowHandler, redirectUri, basePath
     if (options?.authToken) this.authToken_ = options.authToken;
     if (options?.context) this.context_ = options.context;
     if (options?.oauthFlowHandler)
       this.oauthFlowHandler_ = options.oauthFlowHandler;
     if (options?.redirectUri) this.redirectUri_ = options.redirectUri;
+    if (options?.basePath) this.customBasePath_ = options.basePath; // Custom sync folder path
 
     // Validate authentication options
     this.validateAuthOptions(options);
@@ -199,15 +201,31 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
       this.context_ = context;
     }
     api.setAccountProperties(accountProperties);
-    const appDir = await this.api().appDirectory();
-    // the appDir might contain non-ASCII characters
-    // /[^\u0021-\u00ff]/ is used in Node.js to detect the unescaped characters.
-    // See https://github.com/nodejs/node/blob/bbbf97b6dae63697371082475dc8651a6a220336/lib/_http_client.js#L176
-    // eslint-disable-next-line prefer-regex-literals -- Old code before rule was applied
-    const baseDir =
-      RegExp(/[^\u0021-\u00ff]/).exec(appDir) !== null
-        ? encodeURI(appDir)
-        : appDir;
+    
+    // Use custom base path if provided, otherwise use appDirectory()
+    let baseDir: string;
+    if (this.customBasePath_) {
+      // If basePath is a relative path like "Apps/Joplin", construct full path with driveId
+      if (!this.customBasePath_.startsWith('/')) {
+        const driveId = accountProperties.driveId;
+        baseDir = `/drives/${driveId}/root:/${this.customBasePath_}`;
+        console.log('[OneDrive] Constructed full base path:', baseDir);
+      } else {
+        console.log('[OneDrive] Using custom absolute base path:', this.customBasePath_);
+        baseDir = this.customBasePath_;
+      }
+    } else {
+      const appDir = await this.api().appDirectory();
+      // the appDir might contain non-ASCII characters
+      // /[^\u0021-\u00ff]/ is used in Node.js to detect the unescaped characters.
+      // See https://github.com/nodejs/node/blob/bbbf97b6dae63697371082475dc8651a6a220336/lib/_http_client.js#L176
+      // eslint-disable-next-line prefer-regex-literals -- Old code before rule was applied
+      baseDir =
+        RegExp(/[^\u0021-\u00ff]/).exec(appDir) !== null
+          ? encodeURI(appDir)
+          : appDir;
+    }
+    
     const fileApi = new FileApi(baseDir, new FileApiDriverOneDrive(this.api()));
     fileApi.setSyncTargetId(this.syncTargetId());
     fileApi.setLogger(this.logger());

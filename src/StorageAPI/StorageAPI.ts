@@ -56,6 +56,7 @@ type StorageAPIOptions = {
     context?: string | object; // Optional: Account properties (driveId, accountType)
     oauthFlowHandler?: (authUrl: string) => Promise<string>; // Optional: Custom OAuth flow handler
     redirectUri?: string; // Optional: Custom redirect URI for OAuth callback
+    basePath?: string; // Optional: Custom sync folder path (e.g., "/drives/{driveId}/root:/Apps/Joplin")
   };
   googleDriveOptions?: {
     clientId?: string;
@@ -146,6 +147,7 @@ export class StorageAPI {
         context: this.options.oneDriveOptions?.context,
         oauthFlowHandler: this.options.oneDriveOptions?.oauthFlowHandler,
         redirectUri: this.options.oneDriveOptions?.redirectUri,
+        basePath: this.options.oneDriveOptions?.basePath,
       };
 
 
