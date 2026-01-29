@@ -12,6 +12,7 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
   private authToken_: string | null = null;
   private context_: any = null;
   private oauthFlowHandler_: ((url: string) => Promise<string>) | null = null;
+  private redirectUri_: string | null = null;
 
   public static id() {
     return 3;
@@ -21,11 +22,12 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
   public constructor(db: any, options: any = null) {
     super(db, options);
     this.api_ = null;
-    // Options can include: authToken, context, clientId, clientSecret, isPublic, oauthFlowHandler
+    // Options can include: authToken, context, clientId, clientSecret, isPublic, oauthFlowHandler, redirectUri
     if (options?.authToken) this.authToken_ = options.authToken;
     if (options?.context) this.context_ = options.context;
     if (options?.oauthFlowHandler)
       this.oauthFlowHandler_ = options.oauthFlowHandler;
+    if (options?.redirectUri) this.redirectUri_ = options.redirectUri;
 
     // Validate authentication options
     this.validateAuthOptions(options);
@@ -110,13 +112,13 @@ export default class SyncTargetOneDrive extends BaseSyncTarget {
 
   /**
    * Initiates OAuth flow if no auth token is available
-   * @param redirectUri - The redirect URI for OAuth callback (defaults to Azure native client URL)
+   * @param redirectUri - The redirect URI for OAuth callback (optional, uses stored or default value)
    * @returns The authorization code from OAuth flow
    */
   public async initiateOAuthFlow(redirectUri?: string): Promise<void> {
     const api = this.api();
-    // Use Azure's native client redirect URL by default
-    const uri = redirectUri || api.nativeClientRedirectUrl();
+    // Use provided URI, stored URI, or Azure's native client redirect URL by default
+    const uri = redirectUri || this.redirectUri_ || api.nativeClientRedirectUrl();
     const authUrl = api.authCodeUrl(uri);
 
     this.logger().info("Initiating OneDrive OAuth flow...");

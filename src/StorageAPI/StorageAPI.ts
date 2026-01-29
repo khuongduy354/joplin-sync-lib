@@ -55,6 +55,7 @@ type StorageAPIOptions = {
     isPublic?: boolean; // Whether this is a public client (mobile/desktop)
     context?: string | object; // Optional: Account properties (driveId, accountType)
     oauthFlowHandler?: (authUrl: string) => Promise<string>; // Optional: Custom OAuth flow handler
+    redirectUri?: string; // Optional: Custom redirect URI for OAuth callback
   };
   googleDriveOptions?: {
     clientId?: string;
@@ -144,7 +145,9 @@ export class StorageAPI {
         isPublic: this.options.oneDriveOptions?.isPublic ?? true,
         context: this.options.oneDriveOptions?.context,
         oauthFlowHandler: this.options.oneDriveOptions?.oauthFlowHandler,
+        redirectUri: this.options.oneDriveOptions?.redirectUri,
       };
+
 
       this.syncTarget = new SyncTargetClass(null, options);
       // Don't call initFileApi() here - let synchronizer() handle OAuth flow first
