@@ -59,13 +59,10 @@ export class NoteBuilder extends ItemBuilder<Item> {
   }
 
   public build(): Item {
-    if (!this.item.parent_id) {
-      throw new Error("Note must have a parent_id");
-    }
-
     // Set defaults
     this.item.title = this.item.title || "Untitled";
     this.item.body = this.item.body || "";
+    this.item.parent_id = this.item.parent_id || ""; // empty string = root notebook
 
     return this.item as Item;
   }
