@@ -937,24 +937,11 @@ export default class Synchronizer {
 
     const locals = options.items;
 
-    // id generation
-    locals.forEach((item) => {
-      item.id = createUUID();
-    });
-
     for (let i = 0; i < locals.length; i++) {
       let local = locals[i];
-      // note must have parent_id
-      if (local.type_ === BaseModel.TYPE_NOTE && !local.parent_id) {
-        failedItems.push({
-          item: local,
-          error: new Error("Notes must contain parent id"),
-        });
-        continue;
-      }
 
       // id generation
-      local.id = local.overrideId ? local.overrideId : createUUID();
+      local.id = local.overrideId ? local.overrideId : (local.id || createUUID());
 
       // timestamps generation
       let newCreatedTime =
