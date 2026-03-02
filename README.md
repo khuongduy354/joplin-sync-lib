@@ -1,7 +1,6 @@
-# Joplin Sync Library    
+# Joplin Storage SDK    
 
-Joplin Synchronization API documentation. 
- 
+An SDK for Joplin to access its sync storage (sync target) programatically, without sqlite or Joplin instance.
 
 # Usage 
 
