@@ -10,45 +10,31 @@
 - src/sample_app/ : example code for how to use the sync API   
 
 
-# How to use Sync API  
+# How to use Sync API
 
-```js 
+`StorageAPI` is the recommended way to interact with sync targets. It wraps the lower-level `Synchronizer` and handles initialization automatically.
 
-import { loadClasses } from "./helpers/item.ts"; 
+```ts
+import { StorageAPI, createNote } from "joplin-sync-lib";
 
-// run this before everything else
-loadClasses()  
+// Initialize (lazy — init() is called automatically on first operation)
+const storage = new StorageAPI("FileSystem", {
+  filesystemOptions: { syncPath: "src/sample_app/Storage/fsSyncTarget" },
+});
 
-// create item, there're 2 ways 
-// 1. bare js object 
-  note = { 
-    type_: 1, 
-    title: "title", 
-    body: "body"
-  } 
+// Create items
+const note = createNote({ title: "My Note", body: "Hello!" });
+const res = await storage.createItem(note);
+// res.createdItems contains the created items
 
-// 2. noteBuilder (in helpers module) 
-  note = noteBuilder("title", "body")   
+// Get all items
+const items = await storage.getItems();
 
-// Initialize sync target and synchronizer   
-  // init sync target
-  const db = null // currently doesn't need local database to function
-  const syncTarget = new FileSystemSyncTarget(db); 
+// Get specific items by ID
+const items = await storage.getItems({ ids: ["item-id-1", "item-id-2"] });
 
-  // init File API 
-  const syncPath = "src/sample_app/Storage/fsSyncTarget"; // filesystem sync target (relative path is allowed)
-  await syncTarget.initFileApi(syncPath);
-
-  // init synchronizer
-  const syncer = await syncTarget.synchronizer();
-
-
-// Usage 
-const res = await syncer.createItems({items: [note]})    // res.createdIds contains ids of new items  
-
-
-const timestamp = time.IsoToUnixMs("ISO time string here") // time is in helpers module
-const res = await syncer.getItemsMetadata({ context: { timestamp: timestamp } })    // return items metadata newer than timestamp, timestamp default to 0 (get all items metadata)  
-
-syncer.getItem({id: "item id", unserializeItem: false}) // get 1 single item, unserializeItem will determine if result is in JS object or string
+// Get items as deserialized objects
+const items = await storage.getItems({ unserializeAll: true });
 ```
+
+For lower-level access (delta, conflict resolution, etc.), use `Synchronizer` directly — see [API.md](../API\ Usage/API.md).

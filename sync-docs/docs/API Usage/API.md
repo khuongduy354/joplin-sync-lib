@@ -1,38 +1,72 @@
-# Joplin Sync API 
+# Joplin Sync API
 > Main docs for Sync API users.
-- To use this API, assuming that sync target is available (user setup and ran synchronize on joplin client at least once)    
-- Assuming that the library supports only sync version 3 (latest sync version).
- 
-## Initialization 
+- Assuming that the sync target is already set up (user has run Joplin client sync at least once).
+- Library supports sync version 3 only.
 
-```js
-// 1. Pick a sync target 
-// currently, database set to null as argument, in the future, we may inject a db instance
-const syncTarget = new FileSystemSyncTarget(null);   
+## Initialization
 
-// 2. Init File API   
-// depending on file api, it may be different, for e.g: filesystem file api need a path to a directory on the machine.
-const syncPath = "src/sample_app/Storage/fsSyncTarget"; // filesystem sync target
-await syncTarget.initFileApi(syncPath); 
+`StorageAPI` is the main entry point. It handles initialization lazily — you do not need to call `init()` manually; it is called automatically before the first operation.
 
-// or, a MemorySyncTarget which doesn't need to provide anything   
-// const syncTarget = new MemorySyncTarget(null);
-await syncTarget.initFileApi();
+```ts
+import { StorageAPI } from "joplin-sync-lib";
 
+// FileSystem
+const storage = new StorageAPI("FileSystem", {
+  filesystemOptions: { syncPath: "./sync" },
+});
 
-// 3. Retrieve synchronizer 
-// with the synchronizer we can perform operations directly to sync target
-const syncer = await syncTarget.synchronizer();  
+// WebDAV
+const storage = new StorageAPI("WebDAV", {
+  webDAVOptions: {
+    username: "user",
+    password: "pass",
+    path: "https://dav.example.com/remote.php/dav/files/user",
+  },
+});
 
-// 4. Initialize Sync target (creates info.json on remote)
-await syncer.initSyncInfo();
+// JoplinServer
+const storage = new StorageAPI("JoplinServer", {
+  joplinServerOptions: {
+    username: "admin@localhost",
+    password: "admin",
+    path: "http://localhost:22300",
+    userContentPath: "http://localhost:22300",
+  },
+});
+
+// Memory (no options needed)
+const storage = new StorageAPI("Memory");
 ```
 
-## Synchronizer Operations   
-After initializing Synchronizer from above steps, these methods are supported:
+## StorageAPI Methods
 
-```ts  
-// GET a single item from remote, 
+```ts
+// CREATE a single item
+await storage.createItem(item: CreateItem): Promise<{ createdItems: CreateItem[]; failedItems: { item: any; error: any }[] }>
+
+// CREATE multiple items
+await storage.createItems(items: CreateItem[]): Promise<{ createdItems: CreateItem[]; failedItems: ... }>
+
+// GET items (all, or by IDs)
+await storage.getItems(options?: {
+  ids?: string[];         // filter by IDs; omit to get all
+  unserializeAll?: boolean; // if true, return Item objects; otherwise strings
+}): Promise<any[]>
+
+// READ-ONLY check
+storage.isReadOnly(): boolean
+
+// AUTH TOKEN (OneDrive / GoogleDrive)
+storage.getAuthToken(): string | null  // returns JSON string of current auth
+storage.onAuthRefresh(callback: (token: string) => void): void
+```
+
+## Lower-level Synchronizer Operations
+
+For advanced use, the underlying `Synchronizer` exposes these methods. Access it via `syncTarget.synchronizer()` directly.
+
+```ts
+// GET a single item from remote
 // Provide either an id or a path of item
 // unserializeItem option is default to false, if true will return item as an object, return as string otherwise
 .getItem(getItemInput): getItemOutput
